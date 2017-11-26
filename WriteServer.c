@@ -45,7 +45,7 @@ static void print_newest_message(struct arguments* args)
 		convert_string(message);
 		
 		
-		printf("Message for %s:\nTimestamp: %ld, Message: %s, Length: %d\n", args->name, *(int64_t*)message->data+2, message->data+11, message->length);
+		printf("Message for %s:\nTimestamp: %ld, Message: %s, Length: %d\n", args->name, *(int64_t*)(message->data+2), message->data+11, message->length);
 		send_string(message, args->socket_fd);
 		
 		(users+args->user_id)->messages->next = current->next;

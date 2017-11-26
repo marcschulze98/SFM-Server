@@ -2,9 +2,9 @@
 
 static void loop(struct string_info* info, struct arguments* args);
 static void get_string_info(struct string_info* info);
-static void sort_message(const struct string_info* info, struct arguments* args);
-static void put_message_extern(const struct string_info* info, struct arguments* args);
-static void put_message_local(const struct string_info* info, struct arguments* args);
+static void sort_message(const struct string_info* info);
+static void put_message_extern(const struct string_info* info);
+static void put_message_local(const struct string_info* info);
 static bool handle_command(const struct string_info* info);
 
 bool should_shutdown = false;
@@ -40,7 +40,7 @@ static void loop(struct string_info* info, struct arguments* args)
 		get_string_info(info); 	//put source information as prefix
 		if(!handle_command(info)) 					//check if command and handle it accordingly
 		{
-			sort_message(info, args);					//put message in right queue
+			sort_message(info);					//put message in right queue
 		}
 	} else {
 		printf("Received invalid message from: %s -> %s\n", args->name, info->message->data);
@@ -64,7 +64,7 @@ static void get_string_info(struct string_info* info) 				//adds source-prefixes
 	}
 }
 
-static void sort_message(const struct string_info* info, struct arguments* args) //check target server and sort message internally or externally
+static void sort_message(const struct string_info* info) //check target server and sort message internally or externally
 {
 	char* target_server = "\0";
 
@@ -81,9 +81,9 @@ static void sort_message(const struct string_info* info, struct arguments* args)
 
 	if(strcmp(target_server, this_server_name) != 0)
 	{
-		put_message_extern(info, args);
+		put_message_extern(info);
 	} else {
-		put_message_local(info, args);
+		put_message_local(info);
 	}
 
 	if(*target_server != '\0')
@@ -92,12 +92,12 @@ static void sort_message(const struct string_info* info, struct arguments* args)
 	}
 }
 
-static void put_message_extern(const struct string_info* info, struct arguments* args)
+static void put_message_extern(const struct string_info* info)
 {
 
 }
 
-static void put_message_local(const struct string_info* info, struct arguments* args) //copy message in queue of the target user
+static void put_message_local(const struct string_info* info) //copy message in queue of the target user
 {
 	uint32_t server_found = 0;
 	uint32_t user_id = 0;
@@ -169,7 +169,7 @@ static void put_message_local(const struct string_info* info, struct arguments* 
 	message->length += 1;
 		
 	//~ printf("Orig: Timestamp: %ld, Message: %s\n", info->timestamp, info->message->data);
-	//~ printf("New:  Timestamp: %ld, Message: %s\n", *(int64_t*)message->data, message->data+9);
+	printf("New:  Timestamp: %ld, Message: %s\n", *(int64_t*)message->data, message->data+9);
 
 	pthread_mutex_unlock(old_lock);
 }
