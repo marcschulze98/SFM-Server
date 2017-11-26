@@ -122,8 +122,10 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	{
 		if(server_found && (info->message->data[i] == ':'))
 		{
-			username = calloc(i-server_found,1);
+			username = malloc(i-server_found+1);
 			memcpy(username, info->message->data+server_found, i-server_found);
+			username[i-server_found] = '\0';
+			break;
 		}
 		if(info->message->data[i] == '@')
 		{
@@ -133,8 +135,10 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	printf("User-name = %s\n", username);
 	if((user_id = get_user_id(username)) == 0)
 	{
+		free(username);
 		return;
 	}
+	free(username);
 	
 	struct linked_list* current = (users+user_id)->messages;
 	pthread_mutex_t* old_lock = &current->mutex;
