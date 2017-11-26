@@ -12,7 +12,7 @@ bool should_shutdown;
 void* listenserver_thread_func(void* arg)
 {
 	struct arguments* args = arg;
-	struct string message = { .data = malloc(DEFAULT_BUFFER_LENGTH), .length = 0, .capacity = DEFAULT_BUFFER_LENGTH };
+	struct string message = new_string(DEFAULT_BUFFER_LENGTH);
 	struct string_info info = { .source_server = this_server_name, .source_user = args->name, .timestamp = 0, .message = &message};
 	should_shutdown = false;
 	(users+args->user_id)->listen_connected = true;

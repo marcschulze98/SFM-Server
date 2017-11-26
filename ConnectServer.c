@@ -19,9 +19,9 @@ const struct string test_connection = { .data = "\x00\x01\0", .length = 3};
 int main(int argc, char** argv)
 {
 	int sockfd, new_fd;
-	struct string client_option = { .data = malloc(2), .length = 0, .capacity = 2 };
-	struct string username = { .data = malloc(DEFAULT_NAME_LENGTH), .length = 0, .capacity = DEFAULT_NAME_LENGTH };
-	struct string password = { .data = malloc(DEFAULT_NAME_LENGTH), .length = 0, .capacity = DEFAULT_NAME_LENGTH };
+	struct string client_option = new_string(2);
+	struct string username = new_string(DEFAULT_NAME_LENGTH);
+	struct string password = new_string(DEFAULT_NAME_LENGTH);
 	struct sockaddr_storage their_addr;
 	struct arguments* args;
 	socklen_t addr_size;
