@@ -11,6 +11,15 @@ struct user
 	_Atomic bool listen_connected;
 };
 
+struct string_info
+{
+	char* source_server;
+	char* source_user;
+	int64_t timestamp;
+	uint32_t message_begin;
+	struct string* message;
+};
+
 struct group
 {
 	char* name;

@@ -59,6 +59,7 @@ int main(int argc, char** argv)
 			printf("User logged in: %s\n", username.data);
 		} else {
 			printf("User failed login: %s\n", username.data);
+			continue;
 		}
 		
 		args = create_args(&username, new_fd);  //create arguments from connection for the threads
@@ -113,34 +114,44 @@ int main(int argc, char** argv)
 
 void init_users(void) //gather users from a database
 {
-	users = malloc(sizeof(*users)*10);
+	FILE* file = fopen("userlist", "r");
+	if(file == NULL)
+	{
+		printf("Couldn't open userlist file: %s\n", strerror(errno));
+	}
+	uint32_t users_size = 32;
+	users = malloc(sizeof(*users)*users_size);
+	char username[256];
+	char password[256];
+	uint32_t i = 0;
 	
-	users->name = "dummy";
-	users->password = "dummy";
-	users->listen_connected = false;
-	users->write_connected = false;
-	
-	(users+1)->name = "test";
-	(users+1)->password = "test";
-	(users+1)->listen_connected = false;
-	(users+1)->write_connected = false;
-	(users+1)->messages = malloc(sizeof(*users->messages));
-	(users+1)->messages->data = NULL;
-	(users+1)->messages->next = NULL;
-	pthread_mutex_init(&((users+1)->messages->mutex), NULL);
-	
-	(users+2)->name = "marc";
-	(users+2)->password = "test";
-	(users+2)->listen_connected = false;
-	(users+2)->write_connected = false;
-	(users+2)->messages = malloc(sizeof(*users->messages));
-	(users+2)->messages->data = NULL;
-	(users+2)->messages->next = NULL;
-	pthread_mutex_init(&((users+2)->messages->mutex), NULL);
-	
-	user_count = 3;
+	while(fscanf(file, "%s %s", username, password) == 2)
+	{
+		(users+i)->name = malloc(strlen(username)+1);
+		strcpy((users+i)->name, username);
+		(users+i)->password = malloc(strlen(password)+1);
+		strcpy((users+i)->password, password);
 
+		(users+i)->listen_connected = false;
+		(users+i)->write_connected = false;
+		(users+i)->messages = malloc(sizeof(*users->messages));
+		(users+i)->messages->data = NULL;
+		(users+i)->messages->next = NULL;
+		pthread_mutex_init(&((users+i)->messages->mutex), NULL);
+	
+		i++;	
+		if(i >= users_size)
+		{
+			users_size *= 2;
+			users = realloc(users, sizeof(*users)*users_size);
+		}
+	}
+
+	fclose(file);
+	user_count = i;
 	printf("userinit\n");
+	
+	
 }
 
 int init_connection(void) //set up socket for accept()
