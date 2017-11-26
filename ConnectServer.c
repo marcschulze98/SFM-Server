@@ -37,10 +37,22 @@ int main(int argc, char** argv)
 	//~ while(true)
 	{
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // accept an incoming connection
-	
-		while(!get_message(&client_option, new_fd)); //get login data
-		while(!get_message(&username, new_fd));
-		while(!get_message(&password, new_fd));
+		
+		struct return_info return_codes;
+		//get login data
+		do
+		{
+			return_codes = get_message(&client_option, new_fd);
+		}while(!return_codes.return_code); 
+		do
+		{
+			return_codes = get_message(&username, new_fd);
+		}while(!return_codes.return_code);
+		do
+		{
+			return_codes = get_message(&password, new_fd);
+		}while(!return_codes.return_code);
+
 
 		if(user_valid(&username, &password)) //check if user is valid
 		{

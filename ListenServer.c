@@ -32,15 +32,20 @@ void* listenserver_thread_func(void* arg)
 
 static void loop(struct string_info* info, struct arguments* args)
 {
-	while(!get_message(info->message,args->socket_fd)); 		//loop until we get a message
+	//loop until we get a message
+	struct return_info return_codes;
+	do
+	{
+		return_codes = get_message(info->message,args->socket_fd);
+	}while(!return_codes.return_code); 
 
-	if(valid_message_format(info->message, false)) 			//chech for valid message (command or short-message format)
+	if(valid_message_format(info->message, false)) 			//check for valid message (command or short-message format)
 	{
 		printf("Received valid message from: %s -> %s\n", args->name, info->message->data);
-		get_string_info(info); 	//put source information as prefix
+		get_string_info(info); 						//put source information as prefix
 		if(!handle_command(info)) 					//check if command and handle it accordingly
 		{
-			sort_message(info);					//put message in right queue
+			sort_message(info);						//put message in right queue
 		}
 	} else {
 		printf("Received invalid message from: %s -> %s\n", args->name, info->message->data);
