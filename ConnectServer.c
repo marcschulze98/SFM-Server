@@ -14,6 +14,7 @@ struct user* users;
 struct linked_list* outgoing_messages = NULL;
 uint32_t user_count;
 char* this_server_name = "Server1";
+const struct string test_connection = { .data = "\x00\x01\0", .length = 3};
 
 int main(int argc, char** argv)
 {
@@ -28,13 +29,12 @@ int main(int argc, char** argv)
 	pthread_t writethread;
 	pthread_t cleanupthread;
 
-   
 	addr_size = sizeof their_addr;
 	sockfd = init_connection();
 	init_users();
 	signal(SIGPIPE, SIG_IGN); //ignore SIGPIPE (handled internally)
 
-	//~ while(true)
+	while(true)
 	{
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // accept an incoming connection
 		
@@ -92,13 +92,13 @@ int main(int argc, char** argv)
 		args->writeserver = writethread;
 		args->listenserver = listenthread;
 		pthread_create(&cleanupthread, NULL, cleanupserver_thread_func, args); //activate cleanupthread for write- and listenthread
+		pthread_detach(cleanupthread);
 		
 			
 		reset_string(&client_option, 1); //reset sizes in case they got bigger to save memory
 		reset_string(&username, DEFAULT_NAME_LENGTH);
 		reset_string(&password, DEFAULT_NAME_LENGTH);
 	}
-	pthread_join(cleanupthread, NULL);
 
 	//cleanup
 	close(new_fd);
@@ -124,6 +124,10 @@ void init_users(void) //gather users from a database
 	(users+1)->password = "test";
 	(users+1)->listen_connected = false;
 	(users+1)->write_connected = false;
+	(users+1)->messages = malloc(sizeof(*users->messages));
+	(users+1)->messages->data = NULL;
+	(users+1)->messages->next = NULL;
+	pthread_mutex_init(&((users+1)->messages->mutex), NULL);
 	
 	(users+2)->name = "marc";
 	(users+2)->password = "test";

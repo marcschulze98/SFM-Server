@@ -6,8 +6,7 @@ static void print_newest_message(struct arguments* args);
 void* writeserver_thread_func(void* arg)
 {
 	struct arguments* args = arg;
-	struct string test_connection = { .data = "\x00\x01\0", .length = 3};
-	
+	struct return_info return_codes;
 	
 	(users+args->user_id)->write_connected = true;
 	
@@ -15,7 +14,8 @@ void* writeserver_thread_func(void* arg)
 	{
 		loop(args);
 		sleep(1);
-		if(!send_string(&test_connection, args->socket_fd))
+		return_codes = send_string(&test_connection, args->socket_fd);
+		if(return_codes.error_occured)
 		{
 			break;
 		}
@@ -34,7 +34,8 @@ static void loop(struct arguments* args)
 static void print_newest_message(struct arguments* args)
 {
 	struct linked_list* current = (users+args->user_id)->messages;
-	pthread_mutex_lock(&current->mutex);
+	pthread_mutex_t* old_lock = &current->mutex;
+	pthread_mutex_lock(old_lock); //BUG: cant lock after first run for some reason
 
 	if(current->next != NULL)
 	{
@@ -44,8 +45,7 @@ static void print_newest_message(struct arguments* args)
 		struct string* message = current->data;
 		convert_string(message);
 		
-		
-		printf("Message for %s:\nTimestamp: %ld, Message: %s, Length: %d\n", args->name, *(int64_t*)(message->data+2), message->data+11, message->length);
+		//~ printf("Message for %s:\nTimestamp: %ld, Message: %s, Length: %d\n", args->name, *(int64_t*)(message->data+2), message->data+11, message->length);
 		send_string(message, args->socket_fd);
 		
 		(users+args->user_id)->messages->next = current->next;
@@ -54,6 +54,5 @@ static void print_newest_message(struct arguments* args)
 		free(current->data);
 		free(current);
 	}
-
-	pthread_mutex_unlock(&current->mutex);
+	pthread_mutex_unlock(old_lock);
 }

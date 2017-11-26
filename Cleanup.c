@@ -13,10 +13,9 @@ void* cleanupserver_thread_func(void* arg)
 		pthread_join(args->listenserver, NULL);
 	}
 
-	
-
 
 	printf("cleanup: %s\n", args->name);
+	close(args->socket_fd);
 	free(args->name);
 	free(args);
 

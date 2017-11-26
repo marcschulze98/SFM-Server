@@ -7,18 +7,16 @@ static void put_message_extern(const struct string_info* info);
 static void put_message_local(const struct string_info* info);
 static bool handle_command(const struct string_info* info);
 
-bool should_shutdown = false;
+bool should_shutdown;
 
 void* listenserver_thread_func(void* arg)
 {
 	struct arguments* args = arg;
 	struct string message = { .data = malloc(DEFAULT_BUFFER_LENGTH), .length = 0, .capacity = DEFAULT_BUFFER_LENGTH };
 	struct string_info info = { .source_server = this_server_name, .source_user = args->name, .timestamp = 0, .message = &message};
-	
-	
+	should_shutdown = false;
 	(users+args->user_id)->listen_connected = true;
-
-
+	
 	while(!should_shutdown)
 	{
 		loop(&info, args);
@@ -36,7 +34,19 @@ static void loop(struct string_info* info, struct arguments* args)
 	struct return_info return_codes;
 	do
 	{
+		return_codes = send_string(&test_connection, args->socket_fd);
+		if(return_codes.error_occured)
+		{
+			should_shutdown = true;
+			return;
+		}
 		return_codes = get_message(info->message,args->socket_fd);
+		if(return_codes.error_occured)
+		{
+			should_shutdown = true;
+			return;
+		}
+		sleep(1);
 	}while(!return_codes.return_code); 
 
 	if(valid_message_format(info->message, false)) 			//check for valid message (command or short-message format)
@@ -112,7 +122,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	{
 		if(server_found && (info->message->data[i] == ':'))
 		{
-			username = malloc(i-server_found);
+			username = calloc(i-server_found,1);
 			memcpy(username, info->message->data+server_found, i-server_found);
 		}
 		if(info->message->data[i] == '@')
@@ -120,7 +130,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 			server_found = i+1;
 		}
 	}
-	
+	printf("User-name = %s\n", username);
 	if((user_id = get_user_id(username)) == 0)
 	{
 		return;
@@ -174,7 +184,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	message->length += 1;
 		
 	//~ printf("Orig: Timestamp: %ld, Message: %s\n", info->timestamp, info->message->data);
-	printf("New:  Timestamp: %ld, Message: %s\n", *(int64_t*)message->data, message->data+9);
+	//~ printf("New:  Timestamp: %ld, Message: %s\n", *(int64_t*)message->data, message->data+9);
 
 	pthread_mutex_unlock(old_lock);
 }

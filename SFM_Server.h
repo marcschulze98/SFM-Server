@@ -37,6 +37,7 @@ extern struct user* users;
 extern struct linked_list* outgoing_messages;
 extern uint32_t user_count;
 extern char* this_server_name;
+extern const struct string test_connection;
 
 
 #endif //SMF_H
