@@ -11,6 +11,7 @@ bool user_valid(const struct string* username, const struct string* password);
 struct arguments* create_args(const struct string* username, int new_fd);
 
 struct user* users;
+struct linked_list* groups;
 struct linked_list* outgoing_messages = NULL;
 uint32_t user_count;
 char* this_server_name = "Server1";
@@ -28,6 +29,7 @@ int main(int argc, char** argv)
 	pthread_t listenthread;
 	pthread_t writethread;
 	pthread_t cleanupthread;
+	groups = new_linked_list();
 
 	addr_size = sizeof their_addr;
 	sockfd = init_connection();
@@ -134,10 +136,7 @@ void init_users(void) //gather users from a database
 
 		(users+i)->listen_connected = false;
 		(users+i)->write_connected = false;
-		(users+i)->messages = malloc(sizeof(*users->messages));
-		(users+i)->messages->data = NULL;
-		(users+i)->messages->next = NULL;
-		pthread_mutex_init(&((users+i)->messages->mutex), NULL);
+		(users+i)->messages = new_linked_list();
 	
 		i++;	
 		if(i >= users_size)

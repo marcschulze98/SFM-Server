@@ -35,7 +35,7 @@ static void print_newest_message(struct arguments* args)
 {
 	struct linked_list* current = (users+args->user_id)->messages;
 	pthread_mutex_t* old_lock = &current->mutex;
-	pthread_mutex_lock(old_lock); //BUG: cant lock after first run for some reason
+	pthread_mutex_lock(old_lock);
 
 	if(current->next != NULL)
 	{

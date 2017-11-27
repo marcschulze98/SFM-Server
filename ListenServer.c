@@ -5,7 +5,8 @@ static void get_string_info(struct string_info* info);
 static void sort_message(const struct string_info* info);
 static void put_message_extern(const struct string_info* info);
 static void put_message_local(const struct string_info* info);
-static bool handle_command(const struct string_info* info);
+static void create_group(char* groupname, struct arguments* args);
+static bool handle_command(const struct string_info* info, struct arguments* args);
 
 bool should_shutdown;
 
@@ -40,20 +41,21 @@ static void loop(struct string_info* info, struct arguments* args)
 			should_shutdown = true;
 			return;
 		}
+		sleep(3);
 		return_codes = get_message(info->message,args->socket_fd);
 		if(return_codes.error_occured)
 		{
 			should_shutdown = true;
 			return;
 		}
-		sleep(1);
+
 	}while(!return_codes.return_code); 
 
 	if(valid_message_format(info->message, false)) 			//check for valid message (command or short-message format)
 	{
 		printf("Received valid message from: %s -> %s\n", args->name, info->message->data);
 		get_string_info(info); 						//put source information as prefix
-		if(!handle_command(info)) 					//check if command and handle it accordingly
+		if(!handle_command(info, args)) 					//check if command and handle it accordingly
 		{
 			sort_message(info);						//put message in right queue
 		}
@@ -193,16 +195,88 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	pthread_mutex_unlock(old_lock);
 }
 
-static bool handle_command(const struct string_info* info)
+static bool handle_command(const struct string_info* info, struct arguments* args)
 {
 	char* command = info->message->data + info->message_begin;
+	struct string string_without_payload = new_string(DEFAULT_NAME_LENGTH);
+	bool command_run = false;
+
+	for(uint32_t i = 0; i < strlen(command); i++)
+	{
+		if(command[i] != ' ')
+		{
+			realloc_write(&string_without_payload, command[i], i);
+		} else {
+			realloc_write(&string_without_payload, '\0', i);
+			break;
+		}
+	}
+	printf("%s|%d\n", string_without_payload.data, strcmp(string_without_payload.data, "/creategroup"));
 	
-	if(strcmp(command, "/bye") == 0)
+	if(strcmp(string_without_payload.data, "/bye") == 0)
 	{
 		should_shutdown = true;
 		printf("got /bye\n");
-		return true;
+		command_run = true;
+	} else if(strcmp(string_without_payload.data, "/creategroup") == 0) {
+		 create_group(command+12, args);
+		command_run = true;
+	} else if(strcmp(string_without_payload.data, "/deletegroup") == 0) {
+		command_run = true;
+	} else if(strcmp(string_without_payload.data, "/addgroup") == 0) {
+		command_run = true;
 	}
 	
-	return false;
+	free(string_without_payload.data);
+	
+	return command_run;
+}
+
+static void create_group(char* groupname, struct arguments* args)
+{
+	if(strlen(groupname) == 0)
+	{
+		return;
+	}
+	
+	struct linked_list* current = groups;
+	struct group* current_group = current->data;
+
+	pthread_mutex_t* old_lock = &current->mutex;
+	pthread_mutex_lock(old_lock);
+	
+	while(current->next != NULL)
+	{
+		current = current-> next;
+		current_group = current->data;
+		if(current_group != NULL && strcmp(groupname, current_group->name) == 0)
+		{
+			break;
+		}
+		pthread_mutex_lock(&current->mutex);
+		pthread_mutex_unlock(old_lock);
+		old_lock = &current->mutex;
+	}
+	
+	if(current_group!= NULL && strcmp(groupname, current_group->name) == 0)
+	{
+		pthread_mutex_unlock(old_lock);
+		return;
+	}
+
+	current->next = new_linked_list();
+	current = current-> next;
+	
+	current->data = malloc(sizeof(struct group));
+	current_group = current->data;
+	
+	current_group->master = args->name;
+	current_group->name = malloc(strlen(groupname)+1);
+	strcpy(current_group->name, groupname);
+	
+	current_group->members = new_linked_list();
+	
+	
+	pthread_mutex_unlock(old_lock);
+	printf("Group created: %s\n", groupname);
 }

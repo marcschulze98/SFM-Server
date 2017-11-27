@@ -22,6 +22,7 @@ struct string_info
 
 struct group
 {
+	char* master;
 	char* name;
 	struct linked_list* members;
 };
@@ -43,6 +44,7 @@ void* cleanupserver_thread_func(void* arg);
 uint32_t get_user_id(char* username);
 
 extern struct user* users;
+extern struct linked_list* groups;
 extern struct linked_list* outgoing_messages;
 extern uint32_t user_count;
 extern char* this_server_name;
