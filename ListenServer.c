@@ -6,6 +6,7 @@ static void sort_message(const struct string_info* info);
 static void put_message_extern(const struct string_info* info);
 static void put_message_local(const struct string_info* info);
 static void create_group(char* groupname, struct arguments* args);
+static void delete_group(char* groupname, struct arguments* args);
 static bool handle_command(const struct string_info* info, struct arguments* args);
 
 bool should_shutdown;
@@ -219,9 +220,10 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 		printf("got /bye\n");
 		command_run = true;
 	} else if(strcmp(string_without_payload.data, "/creategroup") == 0) {
-		 create_group(command+12, args);
+		create_group(command+13, args);
 		command_run = true;
 	} else if(strcmp(string_without_payload.data, "/deletegroup") == 0) {
+		delete_group(command+13, args);
 		command_run = true;
 	} else if(strcmp(string_without_payload.data, "/addgroup") == 0) {
 		command_run = true;
@@ -258,7 +260,7 @@ static void create_group(char* groupname, struct arguments* args)
 		old_lock = &current->mutex;
 	}
 	
-	if(current_group!= NULL && strcmp(groupname, current_group->name) == 0)
+	if(current_group != NULL && strcmp(groupname, current_group->name) == 0)
 	{
 		pthread_mutex_unlock(old_lock);
 		return;
@@ -270,7 +272,8 @@ static void create_group(char* groupname, struct arguments* args)
 	current->data = malloc(sizeof(struct group));
 	current_group = current->data;
 	
-	current_group->master = args->name;
+	current_group->master = malloc(strlen(args->name)+1);
+	strcpy(current_group->master, args->name);
 	current_group->name = malloc(strlen(groupname)+1);
 	strcpy(current_group->name, groupname);
 	
@@ -279,4 +282,50 @@ static void create_group(char* groupname, struct arguments* args)
 	
 	pthread_mutex_unlock(old_lock);
 	printf("Group created: %s\n", groupname);
+}
+
+static void delete_group(char* groupname, struct arguments* args)
+{
+	if(strlen(groupname) == 0)
+	{
+		return;
+	}
+	
+	struct linked_list* current = groups;
+	struct linked_list* last = NULL;
+	struct group* current_group = current->data;
+
+	pthread_mutex_t* old_lock = &current->mutex;
+	pthread_mutex_lock(old_lock);
+	
+	while(current->next != NULL)
+	{
+		last = current;
+		current = current-> next;
+		current_group = current->data;
+		if(current_group != NULL && strcmp(groupname, current_group->name) == 0)
+		{
+			break;
+		}
+		pthread_mutex_lock(&current->mutex);
+		pthread_mutex_unlock(old_lock);
+		old_lock = &current->mutex;
+	}
+	
+	if(current_group != NULL && strcmp(groupname, current_group->name) == 0 && args->name == current_group->master)
+	{
+		pthread_mutex_lock(&current->mutex);
+		last->next = current->next != NULL ? current->next : NULL;
+		
+		pthread_mutex_destroy(&current->mutex);
+		free(current_group->master);
+		free(current_group->name);
+		destroy_linked_list(current_group->members);
+		free(current->data);
+		free(current);
+		printf("Group deleted: %s\n", groupname);
+	}
+
+	
+	pthread_mutex_unlock(old_lock);
 }
