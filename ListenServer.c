@@ -7,6 +7,7 @@ static void put_message_extern(const struct string_info* info);
 static void put_message_local(const struct string_info* info);
 static void create_group(char* groupname, struct arguments* args);
 static void delete_group(char* groupname, struct arguments* args);
+static void add_group(char* groupname_username, struct arguments* args);
 static bool handle_command(const struct string_info* info, struct arguments* args);
 
 bool should_shutdown;
@@ -72,7 +73,7 @@ static void get_string_info(struct string_info* info) 				//adds source-prefixes
 	int64_t time = ts.tv_sec;
 	info->timestamp = time;
 		
-	for(uint32_t i = 0; i <= info->message->length; i++)
+	for(uint32_t i = 0; i < info->message->length; i++)
 	{
 		if(info->message->data[i] == ':')
 		{
@@ -226,6 +227,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 		delete_group(command+13, args);
 		command_run = true;
 	} else if(strcmp(string_without_payload.data, "/addgroup") == 0) {
+		add_group(command+10, args);
 		command_run = true;
 	}
 	
@@ -312,7 +314,7 @@ static void delete_group(char* groupname, struct arguments* args)
 		old_lock = &current->mutex;
 	}
 	
-	if(current_group != NULL && strcmp(groupname, current_group->name) == 0 && args->name == current_group->master)
+	if(current_group != NULL && strcmp(groupname, current_group->name) == 0 && strcmp(args->name, current_group->master) == 0)
 	{
 		pthread_mutex_lock(&current->mutex);
 		last->next = current->next != NULL ? current->next : NULL;
@@ -328,4 +330,81 @@ static void delete_group(char* groupname, struct arguments* args)
 
 	
 	pthread_mutex_unlock(old_lock);
+}
+
+static void add_group(char* groupname_username, struct arguments* args)
+{
+	if(strlen(groupname_username) == 0)
+	{
+		return;
+	}
+	
+	struct string groupname = new_string(DEFAULT_NAME_LENGTH);
+	struct string username = new_string(DEFAULT_NAME_LENGTH);
+
+	uint32_t group_found = 0;
+	
+	for(uint32_t i = 0; i <= strlen(groupname_username); i++)
+	{
+		if(groupname_username[i] == ' ')
+		{
+			realloc_write(&groupname, '\0', i);
+			group_found = ++i;
+		}
+		
+		if(!group_found)
+		{
+			realloc_write(&groupname, groupname_username[i], i);
+		} else {
+			realloc_write(&username, groupname_username[i], i-group_found);
+		}
+	}
+	printf("%s %s\n", groupname.data, username.data);
+	
+	struct linked_list* current = groups;
+	struct group* current_group = current->data;
+
+	pthread_mutex_t* old_lock = &current->mutex;
+	pthread_mutex_lock(old_lock);
+	
+	while(current->next != NULL)
+	{
+		current = current-> next;
+		current_group = current->data;
+		if(current_group != NULL && strcmp(groupname.data, current_group->name) == 0)
+		{
+			break;
+		}
+		pthread_mutex_lock(&current->mutex);
+		pthread_mutex_unlock(old_lock);
+		old_lock = &current->mutex;
+	}
+
+	if(current_group != NULL && strcmp(groupname.data, current_group->name) == 0 && strcmp(args->name, current_group->master) == 0)
+	{
+		struct linked_list* members = current_group->members;
+
+		while(members->next != NULL)
+		{
+			if(members->data != NULL && strcmp(members->data, username.data) == 0)
+			{
+				break;
+			}
+			members = members->next;
+		}
+		printf("test\n");
+
+		if(members->data == NULL || strcmp(members->data, username.data) != 0)
+		{
+			members->next = new_linked_list();
+			members = members->next;
+			members->data = malloc(strlen(username.data)+1);
+			strcpy(members->data, username.data);
+			printf("added member to %s: %s", groupname.data, username.data);
+		}		
+	}
+
+	pthread_mutex_unlock(old_lock);
+	free(groupname.data);
+	free(username.data);
 }
