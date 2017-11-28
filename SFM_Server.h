@@ -38,9 +38,17 @@ struct arguments
 	_Atomic bool listen_exists;
 };
 
+struct linked_list_return
+{
+	struct linked_list* last;
+	struct linked_list* current;
+	bool found;
+};
+
 void* listenserver_thread_func(void* arg);
 void* writeserver_thread_func(void* arg);
 void* cleanupserver_thread_func(void* arg);
+struct linked_list_return find_groupname(struct linked_list* current, struct string* target);
 uint32_t get_user_id(char* username);
 
 extern struct user* users;

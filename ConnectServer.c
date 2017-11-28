@@ -42,18 +42,18 @@ int main(int argc, char** argv)
 		
 		struct return_info return_codes;
 		//get login data
-		do
-		{
-			return_codes = get_message(&client_option, new_fd);
-		}while(!return_codes.return_code); 
-		do
-		{
-			return_codes = get_message(&username, new_fd);
-		}while(!return_codes.return_code);
-		do
-		{
-			return_codes = get_message(&password, new_fd);
-		}while(!return_codes.return_code);
+		
+		do{ return_codes = get_message(&client_option, new_fd); }
+		while(!return_codes.return_code); 
+		if(return_codes.error_occured) continue;
+		
+		do{ return_codes = get_message(&username, new_fd); }
+		while(!return_codes.return_code);
+		if(return_codes.error_occured) continue;
+		
+		do{ return_codes = get_message(&password, new_fd); }
+		while(!return_codes.return_code);
+		if(return_codes.error_occured) continue;
 
 
 		if(user_valid(&username, &password)) //check if user is valid
