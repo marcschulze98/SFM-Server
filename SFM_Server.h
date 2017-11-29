@@ -24,7 +24,7 @@ struct group
 {
 	char* master;
 	char* name;
-	struct linked_list* members;
+	struct dynamic_array* members;
 };
 
 struct arguments
@@ -52,7 +52,7 @@ struct linked_list_return find_groupname(struct linked_list* current, struct str
 uint32_t get_user_id(char* username);
 
 extern struct user* users;
-extern struct linked_list* groups;
+extern struct dynamic_array* groups;
 extern struct linked_list* outgoing_messages;
 extern uint32_t user_count;
 extern char* this_server_name;

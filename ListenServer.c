@@ -223,72 +223,57 @@ static void create_group(char* groupname, struct arguments* args)
 	{
 		return;
 	}
-	struct string groupname_string = new_string((uint32_t)strlen(groupname)+1);
-	groupname_string.length = (uint32_t)strlen(groupname)+1;
-	strcpy(groupname_string.data, groupname);
+	
+	pthread_mutex_lock(&groups->mutex);
 
-	struct linked_list_return info = find_groupname(groups, &groupname_string);
-
-	if(info.found)
+	struct group* current_group;
+	
+	for(uint32_t i = 0; i < groups->length; i++)
 	{
-		return;
-	}
-
-	info.current->next = new_linked_list();
-	struct linked_list* current = info.current-> next;
-	if(info.last != NULL)
-	{
-		pthread_mutex_unlock(&info.last->mutex);
+		current_group = (struct group*)dynamic_array_at(groups, i);
+		if(strcmp(current_group->name, groupname) == 0)
+		{
+			pthread_mutex_unlock(&groups->mutex);
+			return;
+		}
 	}
 	
-	current->data = malloc(sizeof(struct group));
-	struct group* current_group = current->data;
+	struct group* new_group = malloc(sizeof(*new_group));
+	new_group->master = malloc(strlen(args->name)+1);
+	strcpy(new_group->master, args->name);
+	new_group->name = malloc(strlen(groupname)+1);
+	strcpy(new_group->name, groupname);
+	new_group->members = new_dynamic_array();
+	dynamic_array_push(groups, new_group);
 	
-	current_group->master = malloc(strlen(args->name)+1);
-	strcpy(current_group->master, args->name);
-	current_group->name = malloc(strlen(groupname)+1);
-	strcpy(current_group->name, groupname);
-	
-	current_group->members = new_linked_list();
-	
-	
-	pthread_mutex_unlock(&info.current->mutex);
-	free(groupname_string.data);
+	pthread_mutex_unlock(&groups->mutex);
 	printf("Group created: %s\n", groupname);
 }
 
 static void delete_group(char* groupname, struct arguments* args)
-{
+{	
 	if(strlen(groupname) == 0)
 	{
 		return;
 	}
-	struct string groupname_string = new_string((uint32_t)strlen(groupname)+1);
-	groupname_string.length = (uint32_t)strlen(groupname)+1;
-	strcpy(groupname_string.data, groupname);
-		
-	struct linked_list_return info = find_groupname(groups, &groupname_string);
-	struct linked_list* current = info.current;
-	struct group* current_group = current->data;
-
-	if(info.found && strcmp(args->name, current_group->master) == 0)
+	
+	pthread_mutex_lock(&groups->mutex);
+	struct group* current_group;
+	for(uint32_t i = 0; i < groups->length; i++)
 	{
-		info.last->next = current->next != NULL ? current->next : NULL;
-		
-		pthread_mutex_destroy(&current->mutex);
-		free(current_group->master);
-		free(current_group->name);
-		destroy_linked_list(current_group->members);
-		free(current->data);
-		free(current);
-		printf("Group deleted: %s\n", groupname);
+		current_group = (struct group*)dynamic_array_at(groups, i);
+		if(strcmp(current_group->name, groupname) == 0)
+		{
+			free(current_group->master);
+			free(current_group->name);
+			destroy_dynamic_array(current_group->members);
+			dynamic_array_remove(groups, i);
+			printf("Group deleted: %s\n", groupname);
+			break;
+		}
 	}
-
-	if(info.last != NULL)
-	{
-		pthread_mutex_unlock(&info.last->mutex);
-	}
-	free(groupname_string.data);
+	
+	pthread_mutex_unlock(&groups->mutex);
 }
 
 static void add_group(char* groupname_username, struct arguments* args)
@@ -300,7 +285,6 @@ static void add_group(char* groupname_username, struct arguments* args)
 	
 	struct string groupname = new_string(DEFAULT_NAME_LENGTH);
 	struct string username = new_string(DEFAULT_NAME_LENGTH);
-
 	uint32_t group_found = 0;
 	
 	for(uint32_t i = 0; i <= strlen(groupname_username); i++)
@@ -308,48 +292,59 @@ static void add_group(char* groupname_username, struct arguments* args)
 		if(groupname_username[i] == ' ')
 		{
 			realloc_write(&groupname, '\0', i);
+			groupname.length++;
 			group_found = ++i;
 		}
 		
 		if(!group_found)
 		{
 			realloc_write(&groupname, groupname_username[i], i);
+			groupname.length++;
 		} else {
 			realloc_write(&username, groupname_username[i], i-group_found);
+			username.length++;
 		}
 	}
 	printf("%s %s\n", groupname.data, username.data);
 	
-	struct linked_list_return info = find_groupname(groups, &groupname);
-	if(info.last != NULL)
-	{
-		pthread_mutex_unlock(&info.last->mutex);
-	}
-	struct group* current_group = info.current->data;
 	
-	if(info.found && strcmp(args->name, current_group->master) == 0)
+	pthread_mutex_lock(&groups->mutex);
+	
+	struct group* current_group;
+	bool found = false;
+	for(uint32_t i = 0; i < groups->length; i++)
 	{
-		struct linked_list* members = current_group->members;
-
-		while(members->next != NULL)
+		current_group = (struct group*)dynamic_array_at(groups, i);
+		if(strcmp(current_group->name, groupname.data) == 0)
 		{
-			if(members->data != NULL && strcmp(members->data, username.data) == 0)
+			found = true;
+			break;
+		}
+	}
+	
+	if(found && strcmp(args->name, current_group->master) == 0)
+	{
+		found = false;
+		struct dynamic_array* members = current_group->members;
+		
+		for(uint32_t i = 0; i < members->length; i++)
+		{
+			if(strcmp((char*)dynamic_array_at(members, i), username.data) == 0)
 			{
+				found = true;
 				break;
 			}
-			members = members->next;
 		}
-
-		if(members->data == NULL || strcmp(members->data, username.data) != 0)
+		if(!found)
 		{
-			members->next = new_linked_list();
-			members = members->next;
-			members->data = malloc(strlen(username.data)+1);
-			strcpy(members->data, username.data);
+			char* tmp = malloc(username.length);
+			strcpy(tmp, username.data);
+			dynamic_array_push(members, tmp);
 			printf("added member to %s: %s\n", groupname.data, username.data);
-		}		
+		}
 	}
-	pthread_mutex_unlock(&info.current->mutex);
+	
+	pthread_mutex_unlock(&groups->mutex);
 	free(groupname.data);
 	free(username.data);
 }

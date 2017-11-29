@@ -11,7 +11,7 @@ bool user_valid(const struct string* username, const struct string* password);
 struct arguments* create_args(const struct string* username, int new_fd);
 
 struct user* users;
-struct linked_list* groups;
+struct dynamic_array* groups;
 struct linked_list* outgoing_messages = NULL;
 uint32_t user_count;
 char* this_server_name = "Server1";
@@ -29,8 +29,8 @@ int main(int argc, char** argv)
 	pthread_t listenthread;
 	pthread_t writethread;
 	pthread_t cleanupthread;
-	groups = new_linked_list();
-
+	groups = new_dynamic_array();
+	
 	addr_size = sizeof their_addr;
 	sockfd = init_connection();
 	init_users();
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 		do{ return_codes = get_message(&client_option, new_fd); }
 		while(!return_codes.return_code); 
 		if(return_codes.error_occured) continue;
-		
+
 		do{ return_codes = get_message(&username, new_fd); }
 		while(!return_codes.return_code);
 		if(return_codes.error_occured) continue;
@@ -54,7 +54,6 @@ int main(int argc, char** argv)
 		do{ return_codes = get_message(&password, new_fd); }
 		while(!return_codes.return_code);
 		if(return_codes.error_occured) continue;
-
 
 		if(user_valid(&username, &password)) //check if user is valid
 		{
