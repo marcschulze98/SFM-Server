@@ -32,9 +32,10 @@ static void print_newest_message(struct arguments* args)
 	struct string* message = dynamic_array_at((users+args->user_id)->messages,0);
 	if(message != NULL)
 	{
+		//~ printf("Message for %s:\nTimestamp: %" PRId64", Message: %s, Length: %d\n", args->name, *(int64_t*)(message->data), message->data+8, message->length);
+		printf("message: %s\n", message->data);
 		convert_string(message);
 		
-		printf("Message for %s:\nTimestamp: %ld, Message: %s, Length: %d\n", args->name, *(int64_t*)(message->data+2), message->data+11, message->length);
 		send_string(message, args->socket_fd);
 		free(message->data);
 		dynamic_array_remove((users+args->user_id)->messages,0);
