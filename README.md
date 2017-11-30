@@ -1,3 +1,3 @@
 SFM-Server
 ==========
-Servert for the SFM API
+Server for the SFM API
