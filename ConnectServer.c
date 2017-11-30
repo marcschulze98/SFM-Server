@@ -12,9 +12,9 @@ struct arguments* create_args(const struct string* username, int new_fd);
 
 struct user* users;
 struct dynamic_array* groups;
-struct linked_list* outgoing_messages = NULL;
+struct dynamic_array* outgoing_messages = NULL;
 uint32_t user_count;
-char* this_server_name = "Server1";
+char* this_server_name = "Server1"; 
 const struct string test_connection = { .data = "\x00\x01\0", .length = 3};
 
 int main(int argc, char** argv)
@@ -64,8 +64,6 @@ int main(int argc, char** argv)
 		}
 		
 		args = create_args(&username, new_fd);  //create arguments from connection for the threads
-		args->write_exists = false;
-		args->listen_exists = false;
 		
 		for(uint32_t i = 0; i < user_count; i++) //get id (for offset from the user-list)
 		{
@@ -73,6 +71,7 @@ int main(int argc, char** argv)
 			{
 				args->user_id = i;
 				printf("USER-ID = %d\n", args->user_id);
+				break;
 			}
 		}
 
@@ -167,7 +166,7 @@ int init_connection(void) //set up socket for accept()
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if(setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)))
 	{
-		printf("Fehler: Kann keine IPV4-Adressen annehmen: %s\n", strerror(errno));
+		printf("Error: can't accept IPv4 connection: %s\n", strerror(errno));
 	}
     bind(sockfd, res->ai_addr, res->ai_addrlen);
     listen(sockfd, 3);
@@ -211,6 +210,8 @@ struct arguments* create_args(const struct string* username, int new_fd) //creat
 	args->name = malloc(username->length);
 	memcpy(args->name, username->data, username->length);
 	args->socket_fd = new_fd;
+	args->write_exists = false;
+	args->listen_exists = false;
 
 	return args;
 }

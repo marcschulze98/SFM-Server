@@ -38,25 +38,17 @@ struct arguments
 	_Atomic bool listen_exists;
 };
 
-struct linked_list_return
-{
-	struct linked_list* last;
-	struct linked_list* current;
-	bool found;
-};
-
 void* listenserver_thread_func(void* arg);
 void* writeserver_thread_func(void* arg);
 void* cleanupserver_thread_func(void* arg);
-struct linked_list_return find_groupname(struct linked_list* current, struct string* target);
 uint32_t get_user_id(char* username);
 
-extern struct user* users;
-extern struct dynamic_array* groups;
-extern struct linked_list* outgoing_messages;
-extern uint32_t user_count;
-extern char* this_server_name;
-extern const struct string test_connection;
+extern struct user* users;						//users on this server
+extern struct dynamic_array* groups;			//groups on this server
+extern struct dynamic_array* outgoing_messages;	//messages for other Servers
+extern uint32_t user_count;						//number of users
+extern char* this_server_name;					//self explanatory
+extern const struct string test_connection; 	//default message to check if other side is stil connected
 
 
 #endif //SMF_H

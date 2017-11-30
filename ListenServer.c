@@ -34,7 +34,7 @@ void* listenserver_thread_func(void* arg)
 
 static void loop(struct string_info* info, struct arguments* args)
 {
-	//loop until we get a message
+	//loop until we get a message, check if user still is connected
 	struct return_info return_codes;
 	do
 	{
@@ -44,7 +44,7 @@ static void loop(struct string_info* info, struct arguments* args)
 			should_shutdown = true;
 			return;
 		}
-		sleep(3);
+		sleep(1);
 		return_codes = get_message(info->message,args->socket_fd);
 		if(return_codes.error_occured)
 		{
@@ -57,17 +57,17 @@ static void loop(struct string_info* info, struct arguments* args)
 	if(valid_message_format(info->message, false)) 			//check for valid message (command or short-message format)
 	{
 		printf("Received valid message from: %s -> %s\n", args->name, info->message->data);
-		get_string_info(info); 						//put source information as prefix
+		get_string_info(info); 								//put timestamp as prefix
 		if(!handle_command(info, args)) 					//check if command and handle it accordingly
 		{
-			sort_message(info);						//put message in right queue
+			sort_message(info);								//else put message in right queue
 		}
 	} else {
 		printf("Received invalid message from: %s -> %s\n", args->name, info->message->data);
 	}
 }
 
-static void get_string_info(struct string_info* info) 				//adds source-prefixes + timestamp
+static void get_string_info(struct string_info* info) 				//adds timestamp
 {
 	struct timespec ts;
 	timespec_get(&ts, TIME_UTC);
@@ -117,7 +117,7 @@ static void put_message_extern(const struct string_info* info)
 
 }
 
-static void put_message_local(const struct string_info* info) //copy message in queue of the target user
+static void put_message_local(const struct string_info* info) //copy message in queue of the target user, replace target prefix with source prefix
 {
 	uint32_t server_found = 0;
 	uint32_t user_id = 0;
@@ -145,8 +145,6 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	}
 	free(username);
 	
-
-
 	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data + info->message_begin) + 8 + 3 + 1);
 	struct string* message = malloc(sizeof(struct string));
 	
@@ -164,7 +162,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	pthread_mutex_unlock(&(users+user_id)->messages->mutex);
 }
 
-static void copy_helper(struct string* message, const void* source, uint32_t length, char insert)
+static void copy_helper(struct string* message, const void* source, uint32_t length, char insert) //helper function
 {
 	memcpy(message->data + message->length, source, length);
 	message->length += length;
@@ -172,7 +170,7 @@ static void copy_helper(struct string* message, const void* source, uint32_t len
 	message->length += 1;
 }
 
-static bool handle_command(const struct string_info* info, struct arguments* args)
+static bool handle_command(const struct string_info* info, struct arguments* args) // check if message is a command, seperate payload from command
 {
 	char* command = info->message->data + info->message_begin;
 	if(command[0] != '/')
@@ -212,7 +210,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 	return true;
 }
 
-static void create_group(char* groupname, struct arguments* args)
+static void create_group(char* groupname, struct arguments* args) //check if group already exists, if not, create it
 {
 	if(strlen(groupname) == 0)
 	{
@@ -245,7 +243,7 @@ static void create_group(char* groupname, struct arguments* args)
 	printf("Group created: %s\n", groupname);
 }
 
-static void delete_group(char* groupname, struct arguments* args)
+static void delete_group(char* groupname, struct arguments* args) //check if group exists and delelte it
 {	
 	if(strlen(groupname) == 0)
 	{
@@ -271,7 +269,7 @@ static void delete_group(char* groupname, struct arguments* args)
 	pthread_mutex_unlock(&groups->mutex);
 }
 
-static void add_group(char* groupname_username, struct arguments* args)
+static void add_group(char* groupname_username, struct arguments* args) //check if group exists, then if user exists, if not, add user to group
 {
 	if(strlen(groupname_username) == 0)
 	{
@@ -299,6 +297,11 @@ static void add_group(char* groupname_username, struct arguments* args)
 			realloc_write(&username, groupname_username[i], i-group_found);
 			username.length++;
 		}
+	}
+	
+	if(!group_found)
+	{
+		return;
 	}
 	printf("%s %s\n", groupname.data, username.data);
 	
