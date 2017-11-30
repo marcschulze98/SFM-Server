@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
 	//cleanup
 	close(new_fd);
-	destroy_linked_list(users->messages);
+	destroy_dynamic_array(users->messages);
 	free(client_option.data);
 	free(username.data);
 	free(password.data);
@@ -135,7 +135,7 @@ void init_users(void) //gather users from a database
 
 		(users+i)->listen_connected = false;
 		(users+i)->write_connected = false;
-		(users+i)->messages = new_linked_list();
+		(users+i)->messages = new_dynamic_array();
 	
 		i++;	
 		if(i >= users_size)

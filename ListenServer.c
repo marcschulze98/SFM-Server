@@ -145,30 +145,23 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	}
 	free(username);
 	
-	struct linked_list* current = get_last_linked_list((users+user_id)->messages);
-	pthread_mutex_t* old_lock = &current->mutex;
 
-	current->next = malloc(sizeof(*current));
-	current = current-> next;
-
-	pthread_mutex_init(&current->mutex, NULL);
-	current->next = NULL;
 
 	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data + info->message_begin) + 8 + 3 + 1);
-	current->data = malloc(sizeof(struct string));
-	struct string* message = current->data;
+	struct string* message = malloc(sizeof(struct string));
 	
-	message->data = malloc(DEFAULT_BUFFER_LENGTH);
+	message->data = malloc(complete_length);
 	message->length = 0;
-	message->capacity = DEFAULT_BUFFER_LENGTH;
-	adjust_string_size(current->data, complete_length);
+	message->capacity = complete_length;
 	
 	copy_helper(message, (const void*)&info->timestamp, 8, '>');
 	copy_helper(message, (const void*)info->source_server, (uint32_t)strlen(info->source_server), '@');
 	copy_helper(message, (const void*)info->source_user, (uint32_t)strlen(info->source_user), ':');
 	copy_helper(message, (const void*)(info->message->data + info->message_begin), (uint32_t)strlen(info->message->data + info->message_begin), '\0');
-
-	pthread_mutex_unlock(old_lock);
+	
+	pthread_mutex_lock(&(users+user_id)->messages->mutex);
+	dynamic_array_push((users+user_id)->messages, message);
+	pthread_mutex_unlock(&(users+user_id)->messages->mutex);
 }
 
 static void copy_helper(struct string* message, const void* source, uint32_t length, char insert)
@@ -188,6 +181,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 	}
 	
 	struct string string_without_payload = new_string(DEFAULT_NAME_LENGTH);
+	bool has_payload = false;
 
 	for(uint32_t i = 0; i <= strlen(command); i++)
 	{
@@ -195,6 +189,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 		{
 			realloc_write(&string_without_payload, command[i], i);
 		} else {
+			has_payload = true;
 			realloc_write(&string_without_payload, '\0', i);
 			break;
 		}
@@ -204,11 +199,11 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 	{
 		should_shutdown = true;
 		printf("got /bye\n");
-	} else if(strcmp(string_without_payload.data, "/creategroup") == 0) {
+	} else if(strcmp(string_without_payload.data, "/creategroup") == 0 && has_payload) {
 		create_group(command+13, args);
-	} else if(strcmp(string_without_payload.data, "/deletegroup") == 0) {
+	} else if(strcmp(string_without_payload.data, "/deletegroup") == 0 && has_payload) {
 		delete_group(command+13, args);
-	} else if(strcmp(string_without_payload.data, "/addgroup") == 0) {
+	} else if(strcmp(string_without_payload.data, "/addgroup") == 0 && has_payload) {
 		add_group(command+10, args);
 	}
 	

@@ -6,7 +6,7 @@ struct user
 {
 	char* name;
 	char* password;
-	struct linked_list* messages;
+	struct dynamic_array* messages;
 	_Atomic bool write_connected;
 	_Atomic bool listen_connected;
 };
