@@ -12,7 +12,7 @@ static void get_group(char* groupname, struct arguments* args);
 static void copy_helper(struct string* message, const void* source, uint32_t length, char insert);
 static bool handle_command(const struct string_info* info, struct arguments* args);
 
-bool should_shutdown;
+_Thread_local bool should_shutdown;
 
 void* listenserver_thread_func(void* arg)
 {
@@ -122,16 +122,17 @@ static void put_message_extern(const struct string_info* info)
 static void put_message_local(const struct string_info* info) //copy message in queue of the target user, replace target prefix with source prefix
 {
 	uint32_t server_found = 0;
-	uint32_t user_id = 0;
-	char* username = NULL;
+	uint32_t user_id;
+	char* target_name = NULL;
+	char* groupname;
 	
 	for(uint32_t i = 0; i < info->message->length; i++)
 	{
 		if(server_found && (info->message->data[i] == ':'))
 		{
-			username = malloc(i-server_found+1);
-			memcpy(username, info->message->data+server_found, i-server_found);
-			username[i-server_found] = '\0';
+			target_name = malloc(i-server_found+1);
+			memcpy(target_name, info->message->data+server_found, i-server_found);
+			target_name[i-server_found] = '\0';
 			break;
 		}
 		if(info->message->data[i] == '@')
@@ -139,13 +140,6 @@ static void put_message_local(const struct string_info* info) //copy message in 
 			server_found = i+1;
 		}
 	}
-	printf("User-name = %s\n", username);
-	if((user_id = get_user_id(username)) == 0)
-	{
-		free(username);
-		return;
-	}
-	free(username);
 	
 	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data + info->message_begin) + 8 + 3 + 1);
 	struct string* message = malloc(sizeof(*message));
@@ -158,10 +152,48 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	copy_helper(message, (const void*)info->source_server, (uint32_t)strlen(info->source_server), '@');
 	copy_helper(message, (const void*)info->source_user, (uint32_t)strlen(info->source_user), ':');
 	copy_helper(message, (const void*)(info->message->data + info->message_begin), (uint32_t)strlen(info->message->data + info->message_begin), '\0');
-
-	pthread_mutex_lock(&(users+user_id)->messages->mutex);
-	dynamic_array_push((users+user_id)->messages, message);
-	pthread_mutex_unlock(&(users+user_id)->messages->mutex);
+	printf("here\n");
+	
+	
+	pthread_mutex_lock(&groups->mutex);
+	
+	if((groupname = contains_group(target_name)))
+	{
+		char* username = NULL;
+		struct string* tmp;
+		for(uint32_t i = 0; (username = get_group_user(groupname, i)) != NULL; i++)
+		{
+			printf("%p\n", username);
+			printf("name: %s\n", username);
+			if((user_id = get_user_id(username)) == 0)
+			{
+				continue;
+			}
+			tmp = malloc(sizeof(*tmp));
+			string_copy(tmp, message); //TODO: reference counting instead of copying every string?
+			pthread_mutex_lock(&(users+user_id)->messages->mutex);
+			dynamic_array_push((users+user_id)->messages, tmp);
+			pthread_mutex_unlock(&(users+user_id)->messages->mutex);
+		}
+		free(message->data);
+		free(message);
+		free(groupname);
+	} else {
+		printf("User-name = %s\n", target_name);
+		if((user_id = get_user_id(target_name)) == 0)
+		{
+			goto cleanup;
+		}
+		pthread_mutex_lock(&(users+user_id)->messages->mutex);
+		dynamic_array_push((users+user_id)->messages, message);
+		pthread_mutex_unlock(&(users+user_id)->messages->mutex);
+	}
+	printf("through\n");
+	
+cleanup:
+	free(target_name);
+	pthread_mutex_unlock(&groups->mutex);
+	
 }
 
 static void copy_helper(struct string* message, const void* source, uint32_t length, char insert) //helper function
@@ -188,9 +220,11 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 		if(command[i] != ' ')
 		{
 			realloc_write(&string_without_payload, command[i], i);
+			string_without_payload.length++;
 		} else {
 			has_payload = true;
 			realloc_write(&string_without_payload, '\0', i);
+			string_without_payload.length++;
 			break;
 		}
 	}
@@ -200,13 +234,13 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 		should_shutdown = true;
 		printf("got /bye\n");
 	} else if(strcmp(string_without_payload.data, "/creategroup") == 0 && has_payload) {
-		create_group(command+13, args);
+		create_group(command+strlen("/creategroup")+1, args);
 	} else if(strcmp(string_without_payload.data, "/deletegroup") == 0 && has_payload) {
-		delete_group(command+13, args);
+		delete_group(command+strlen("/creategroup")+1, args);
 	} else if(strcmp(string_without_payload.data, "/addgroup") == 0 && has_payload) {
-		add_group(command+10, args);
+		add_group(command+strlen("/addgroup")+1, args);
 	} else if(strcmp(string_without_payload.data, "/showgroup") == 0 && has_payload) {
-		get_group(command+11, args);
+		get_group(command+strlen("/showgroup")+1, args);
 	} else if(strcmp(string_without_payload.data, "/showgroup") == 0) {
 		get_group(string_without_payload.data, args);
 	} 
@@ -261,7 +295,7 @@ static void delete_group(char* groupname, struct arguments* args) //check if gro
 	for(uint32_t i = 0; i < groups->length; i++)
 	{
 		current_group = (struct group*)dynamic_array_at(groups, i);
-		if(strcmp(current_group->name, groupname) == 0)
+		if(strcmp(current_group->name, groupname) == 0 && strcmp(args->name, current_group->master) == 0)
 		{
 			free(current_group->master);
 			free(current_group->name);

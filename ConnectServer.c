@@ -147,8 +147,6 @@ void init_users(void) //gather users from a database
 	fclose(file);
 	user_count = i;
 	printf("userinit\n");
-	
-	
 }
 
 int init_connection(void) //set up socket for accept()
@@ -164,7 +162,7 @@ int init_connection(void) //set up socket for accept()
 
     getaddrinfo(NULL, "2000", &hints, &res);  // make a socket, bind it, and listen on it
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)))
+    if(setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no))) //set option to allow IPv6 too
 	{
 		printf("Error: can't accept IPv4 connection: %s\n", strerror(errno));
 	}
