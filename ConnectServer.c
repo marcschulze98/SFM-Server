@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 	pthread_t cleanupthread;
 	groups = new_dynamic_array();
 	
-	addr_size = sizeof their_addr;
+	addr_size = sizeof(their_addr);
 	sockfd = init_connection();
 	init_users();
 	signal(SIGPIPE, SIG_IGN); //ignore SIGPIPE (handled internally)
@@ -43,17 +43,21 @@ int main(int argc, char** argv)
 		struct return_info return_codes;
 		//get login data
 		
-		do{ return_codes = get_message(&client_option, new_fd); }
+		do return_codes = get_message(&client_option, new_fd);
 		while(!return_codes.return_code); 
-		if(return_codes.error_occured) continue;
+		if(return_codes.error_occured)
+			continue;
 
-		do{ return_codes = get_message(&username, new_fd); }
-		while(!return_codes.return_code);
-		if(return_codes.error_occured) continue;
 		
-		do{ return_codes = get_message(&password, new_fd); }
+		do return_codes = get_message(&username, new_fd);
 		while(!return_codes.return_code);
-		if(return_codes.error_occured) continue;
+		if(return_codes.error_occured)
+			continue;
+		
+		do return_codes = get_message(&password, new_fd);
+		while(!return_codes.return_code);
+		if(return_codes.error_occured)
+			continue;
 
 		if(user_valid(&username, &password)) //check if user is valid
 		{
@@ -69,11 +73,14 @@ int main(int argc, char** argv)
 		{
 			if(strcmp((users+i)->name, args->name) == 0)
 			{
-				args->user_id = i;
+				args->user_id = (int32_t)i;
 				printf("USER-ID = %d\n", args->user_id);
 				break;
 			}
 		}
+		
+		if(args->user_id < 0)
+			continue;
 
 		if(client_option.data[0] == '1' && (users+args->user_id)->listen_connected == false && (users+args->user_id)->write_connected == false) //create thread according to client_option
 		{
@@ -87,15 +94,13 @@ int main(int argc, char** argv)
 		} else if(client_option.data[0] == '3' && (users+args->user_id)->write_connected == false) {
 			args->write_exists = true;
 			pthread_create(&writethread, NULL, writeserver_thread_func, args);
-		} else {
-			close(new_fd);
 		}
+		
 		args->writeserver = writethread;
 		args->listenserver = listenthread;
 		pthread_create(&cleanupthread, NULL, cleanupserver_thread_func, args); //activate cleanupthread for write- and listenthread
 		pthread_detach(cleanupthread);
 		
-			
 		reset_string(&client_option, 1); //reset sizes in case they got bigger to save memory
 		reset_string(&username, DEFAULT_NAME_LENGTH);
 		reset_string(&password, DEFAULT_NAME_LENGTH);
@@ -118,6 +123,7 @@ void init_users(void) //gather users from a database
 	if(file == NULL)
 	{
 		printf("Couldn't open userlist file: %s\n", strerror(errno));
+		exit(1);
 	}
 	uint32_t users_size = 32;
 	users = malloc(sizeof(*users)*users_size);
@@ -153,24 +159,42 @@ int init_connection(void) //set up socket for accept()
 {
 	int sockfd;
 	int no = 0;
+	int getaddrinfo_return;
 	struct addrinfo hints, *res;
-    
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET6;			// use IPv4 or IPv6
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;		// fill in my IP for me
 
-    getaddrinfo(NULL, "2000", &hints, &res);  // make a socket, bind it, and listen on it
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if(setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no))) //set option to allow IPv6 too
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET6;			// use IPv4 or IPv6
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;		// fill in my IP for me
+
+	if((getaddrinfo_return = getaddrinfo(NULL, "2000", &hints, &res)))
+	{
+		printf("Error: can't create socket: %s\n", gai_strerror(getaddrinfo_return));
+		exit(1);
+	}
+	if((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) //ceate socket
+	{
+		printf("Error: can't create socket: %s\n", strerror(errno));
+		exit(1);
+	}
+	if(setsockopt(sockfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)) == -1) //set option to allow IPv6 too
 	{
 		printf("Error: can't accept IPv4 connection: %s\n", strerror(errno));
+		exit(1);
 	}
-    bind(sockfd, res->ai_addr, res->ai_addrlen);
-    listen(sockfd, 3);
-    
-    freeaddrinfo(res);
-    
+	if(bind(sockfd, res->ai_addr, res->ai_addrlen)) //bind socket
+	{
+		printf("Error: can't bind to socket: %s\n", strerror(errno));
+		exit(1);
+	}
+	if(listen(sockfd, 3)) //listen to socket
+	{
+		printf("Error: can't listen on socket: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	freeaddrinfo(res);
+
 	return sockfd;
 }
 
@@ -207,6 +231,7 @@ struct arguments* create_args(const struct string* username, int new_fd) //creat
 	
 	args->name = malloc(username->length);
 	memcpy(args->name, username->data, username->length);
+	args->user_id = -1;
 	args->socket_fd = new_fd;
 	args->write_exists = false;
 	args->listen_exists = false;

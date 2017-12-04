@@ -31,7 +31,7 @@ struct arguments
 {
 	char* name;
 	int socket_fd;
-	uint32_t user_id;
+	int32_t user_id;
 	pthread_t writeserver;
 	pthread_t listenserver;
 	_Atomic bool write_exists;

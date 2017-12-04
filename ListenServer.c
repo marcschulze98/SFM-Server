@@ -136,9 +136,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 			break;
 		}
 		if(info->message->data[i] == '@')
-		{
 			server_found = i+1;
-		}
 	}
 	
 	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data + info->message_begin) + 8 + 3 + 1);
@@ -166,9 +164,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 			printf("%p\n", username);
 			printf("name: %s\n", username);
 			if((user_id = get_user_id(username)) == 0)
-			{
 				continue;
-			}
 			tmp = malloc(sizeof(*tmp));
 			string_copy(tmp, message); //TODO: reference counting instead of copying every string?
 			pthread_mutex_lock(&(users+user_id)->messages->mutex);
@@ -181,9 +177,7 @@ static void put_message_local(const struct string_info* info) //copy message in 
 	} else {
 		printf("User-name = %s\n", target_name);
 		if((user_id = get_user_id(target_name)) == 0)
-		{
 			goto cleanup;
-		}
 		pthread_mutex_lock(&(users+user_id)->messages->mutex);
 		dynamic_array_push((users+user_id)->messages, message);
 		pthread_mutex_unlock(&(users+user_id)->messages->mutex);
@@ -208,9 +202,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 {
 	char* command = info->message->data + info->message_begin;
 	if(command[0] != '/')
-	{
 		return false;
-	}
 	
 	struct string string_without_payload = new_string(DEFAULT_NAME_LENGTH);
 	bool has_payload = false;
@@ -253,9 +245,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 static void create_group(char* groupname, struct arguments* args) //check if group already exists, if not, create it
 {
 	if(strlen(groupname) == 0)
-	{
 		return;
-	}
 	
 	pthread_mutex_lock(&groups->mutex);
 
@@ -286,9 +276,7 @@ static void create_group(char* groupname, struct arguments* args) //check if gro
 static void delete_group(char* groupname, struct arguments* args) //check if group exists and delelte it
 {	
 	if(strlen(groupname) == 0)
-	{
 		return;
-	}
 	
 	pthread_mutex_lock(&groups->mutex);
 	struct group* current_group;
@@ -312,9 +300,7 @@ static void delete_group(char* groupname, struct arguments* args) //check if gro
 static void add_group(char* groupname_username, struct arguments* args) //check if group exists, then if user exists, if not, add user to group
 {
 	if(strlen(groupname_username) == 0)
-	{
 		return;
-	}
 	
 	struct string groupname = new_string(DEFAULT_NAME_LENGTH);
 	struct string username = new_string(DEFAULT_NAME_LENGTH);
@@ -340,12 +326,8 @@ static void add_group(char* groupname_username, struct arguments* args) //check 
 	}
 	
 	if(!group_found)
-	{
 		return;
-	}
-	printf("%s %s\n", groupname.data, username.data);
-	
-	
+
 	pthread_mutex_lock(&groups->mutex);
 	
 	struct group* current_group;
@@ -409,6 +391,8 @@ static void get_group(char* groupname, struct arguments* args)
 				current_group = (struct group*)dynamic_array_at(groups, i);
 				realloc_write(answer, '\n', answer->length);
 				answer->length++;
+				realloc_write(answer, '\t', answer->length);
+				answer->length++;
 				string_append(answer, current_group->name);
 			}
 		}
@@ -434,6 +418,8 @@ static void get_group(char* groupname, struct arguments* args)
 			for(size_t i = 0; i < members->length; i++)
 			{
 				realloc_write(answer, '\n', answer->length);
+				answer->length++;
+				realloc_write(answer, '\t', answer->length);
 				answer->length++;
 				string_append(answer, members->data[i]);
 			}

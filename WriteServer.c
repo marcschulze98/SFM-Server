@@ -15,9 +15,7 @@ void* writeserver_thread_func(void* arg)
 		sleep(1);
 		return_codes = send_string(&test_connection, args->socket_fd);
 		if(return_codes.error_occured)
-		{
 			break;
-		}
 	}
 
 	(users+args->user_id)->write_connected = false;

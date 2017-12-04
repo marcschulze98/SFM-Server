@@ -6,10 +6,7 @@ uint32_t get_user_id(char* username)
 	{
 		for(uint32_t i = 1; i < user_count; i++)
 		{
-			if(strcmp((users+i)->name, username) == 0)
-			{
-				return i;
-			}
+			if(strcmp((users+i)->name, username) == 0) return i;
 		}
 	}
 	return 0;
