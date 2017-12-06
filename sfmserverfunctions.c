@@ -1,5 +1,4 @@
 #include "SFM_Server.h"
-static void copy_helper(struct string* message, const void* source, uint32_t length, char insert);
 
 uint32_t get_user_id(char* username)
 {
@@ -121,7 +120,7 @@ cleanup:
 	
 }
 
-static void copy_helper(struct string* message, const void* source, uint32_t length, char insert) //helper function
+void copy_helper(struct string* message, const void* source, uint32_t length, char insert) //helper function
 {
 	memcpy(message->data + message->length, source, length);
 	message->length += length;

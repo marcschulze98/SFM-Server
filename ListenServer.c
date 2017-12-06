@@ -114,7 +114,52 @@ static void sort_message(const struct string_info* info) //check target server a
 
 static void put_message_extern(const struct string_info* info)
 {
-	//TODO
+	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data) + 8 + 3 + 1);
+	struct string* message = malloc(sizeof(*message));
+	char* target_server = "\0";
+	struct outgoing* out;
+	struct dynamic_array* queue;
+	for(uint32_t i = 0; i < info->message->length; i++)
+	{
+		if(info->message->data[i] == ':')
+		{
+			target_server = malloc(i+1);
+			strncpy(target_server, info->message->data, i);
+			target_server[i] = '\0';
+		}
+	}
+	bool found = false;
+	for(uint32_t i = 0; i < outgoing_messages->length; i++)
+	{
+		out = dynamic_array_at(outgoing_messages, i);
+		if(strcmp(target_server, out->target_server) == 0)
+		{
+			queue = out->messages;
+			break;
+		}
+	}
+	
+	if(!found)
+	{
+		out = malloc(sizeof(*out));
+		out->target_server = target_server;
+		out->messages = new_dynamic_array();
+		out->tries = 0;
+		queue = out->messages;
+	} else {
+		free(target_server);
+	}
+		
+	message->data = malloc(complete_length);
+	message->length = 0;
+	message->capacity = complete_length;
+	
+	copy_helper(message, info->source_server, (uint32_t)strlen(info->source_server), '@');
+	copy_helper(message, info->source_user, (uint32_t)strlen(info->source_user), ':');
+	copy_helper(message, &info->timestamp, 8, '>');
+	copy_helper(message, info->message->data, (uint32_t)strlen(info->message->data), '\0');
+	
+	dynamic_array_push(queue, message);	
 }
 
 static bool handle_command(const struct string_info* info, struct arguments* args) // check if message is a command, seperate payload from command

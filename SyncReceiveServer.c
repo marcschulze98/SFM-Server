@@ -143,12 +143,14 @@ static struct string_info* get_string_info(struct string* message)
 	{
 		if(!server_found && message->data[i] == '@')
 		{
-			info->source_server = malloc(i);
+			info->source_server = malloc(i+1);
 			strncpy(info->source_server, message->data, i);
+			info->source_server[i] = '\0';
 			server_found = i+1;
 		} else if(server_found && message->data[i] == ':') {
-			info->source_user = malloc(i-server_found);
+			info->source_user = malloc(i-server_found+1);
 			strncpy(info->source_user, message->data + server_found, i-server_found);
+			info->source_user[i-server_found] = '\0';
 			user_found = i+1;
 			break;
 		}
