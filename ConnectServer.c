@@ -51,25 +51,24 @@ int main(int argc, char** argv)
 		do return_codes = get_message(&client_option, new_fd);
 		while(!return_codes.return_code); 
 		if(return_codes.error_occured)
-			continue;
+			goto cleanup;
 
-		
 		do return_codes = get_message(&username, new_fd);
 		while(!return_codes.return_code);
 		if(return_codes.error_occured)
-			continue;
+			goto cleanup;
 		
 		do return_codes = get_message(&password, new_fd);
 		while(!return_codes.return_code);
 		if(return_codes.error_occured)
-			continue;
+			goto cleanup;
 
 		if(user_valid(&username, &password)) //check if user is valid
 		{
 			printf("User logged in: %s\n", username.data);
 		} else {
 			printf("User failed login: %s\n", username.data);
-			continue;
+			goto cleanup;
 		}
 		
 		args = create_args(&username, new_fd);  //create arguments from connection for the threads
@@ -85,7 +84,7 @@ int main(int argc, char** argv)
 		}
 		
 		if(args->user_id < 0)
-			continue;
+			goto cleanup;
 
 		if(client_option.data[0] == '1' && (users+args->user_id)->listen_connected == false && (users+args->user_id)->write_connected == false) //create thread according to client_option
 		{
@@ -106,13 +105,14 @@ int main(int argc, char** argv)
 		pthread_create(&cleanupthread, NULL, cleanupserver_thread_func, args); //activate cleanupthread for write- and listenthread
 		pthread_detach(cleanupthread);
 		
+	cleanup:
+		close(new_fd);
 		reset_string(&client_option, 1); //reset sizes in case they got bigger to save memory
 		reset_string(&username, DEFAULT_NAME_LENGTH);
 		reset_string(&password, DEFAULT_NAME_LENGTH);
 	}
 
 	//cleanup
-	close(new_fd);
 	destroy_dynamic_array(users->messages);
 	free(client_option.data);
 	free(username.data);
