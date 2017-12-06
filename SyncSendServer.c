@@ -5,7 +5,7 @@
 
 static int init_connection(char* target_server);
 
-void* syncserver_thread_func(void* arg)
+void* syncsendserver_thread_func(void* arg)
 {
 	while(true)
 	{
@@ -58,7 +58,7 @@ static int init_connection(char* target_server)
 	hints.ai_family = AF_INET;     		// don't care IPv4 or IPv6
 	hints.ai_socktype = SOCK_STREAM; 	// TCP stream sockets
 
-	if ((status = getaddrinfo(target_server, "2000", &hints, &res)) != 0) //get ip from hostname
+	if ((status = getaddrinfo(target_server, "2001", &hints, &res)) != 0) //get ip from hostname
 	{
 		printf("getaddrinfo error: %s\n", gai_strerror(status));
 		return -1;

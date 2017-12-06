@@ -29,12 +29,17 @@ int main(int argc, char** argv)
 	pthread_t listenthread;
 	pthread_t writethread;
 	pthread_t cleanupthread;
+	pthread_t syncreceivethread;
 	groups = new_dynamic_array();
 	
 	addr_size = sizeof(their_addr);
 	sockfd = init_connection();
 	init_users();
 	signal(SIGPIPE, SIG_IGN); //ignore SIGPIPE (handled internally)
+	
+	pthread_create(&syncreceivethread, NULL, syncreceiveserver_thread_func, NULL);
+	pthread_detach(syncreceivethread);
+
 
 	while(true)
 	{
@@ -157,6 +162,7 @@ void init_users(void) //gather users from a database
 
 int init_connection(void) //set up socket for accept()
 {
+	printf("Setting up Masterserver...\n");
 	int sockfd;
 	int no = 0;
 	int getaddrinfo_return;

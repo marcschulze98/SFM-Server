@@ -47,7 +47,8 @@ struct outgoing
 
 void* listenserver_thread_func(void* arg);
 void* writeserver_thread_func(void* arg);
-void* syncserver_thread_func(void* arg);
+void* syncsendserver_thread_func(void* arg);
+void* syncreceiveserver_thread_func(void* arg);
 void* cleanupserver_thread_func(void* arg);
 char* contains_group(char* name);
 char* get_group_user(char* groupname, uint32_t user_number);
