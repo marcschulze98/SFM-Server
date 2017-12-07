@@ -119,21 +119,24 @@ static void put_message_extern(const struct string_info* info)
 	char* target_server = "\0";
 	struct outgoing* out;
 	struct dynamic_array* queue;
+	
 	for(uint32_t i = 0; i < info->message->length; i++)
 	{
-		if(info->message->data[i] == ':')
+		if(info->message->data[i] == '@')
 		{
 			target_server = malloc(i+1);
 			strncpy(target_server, info->message->data, i);
 			target_server[i] = '\0';
 		}
 	}
+	
 	bool found = false;
 	for(uint32_t i = 0; i < outgoing_messages->length; i++)
 	{
 		out = dynamic_array_at(outgoing_messages, i);
 		if(strcmp(target_server, out->target_server) == 0)
 		{
+			found = true;
 			queue = out->messages;
 			break;
 		}
@@ -145,6 +148,7 @@ static void put_message_extern(const struct string_info* info)
 		out->target_server = target_server;
 		out->messages = new_dynamic_array();
 		out->tries = 0;
+		dynamic_array_push(outgoing_messages, out);
 		queue = out->messages;
 	} else {
 		free(target_server);

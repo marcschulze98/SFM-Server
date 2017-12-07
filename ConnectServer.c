@@ -12,7 +12,7 @@ struct arguments* create_args(const struct string* username, int new_fd);
 
 struct user* users;
 struct dynamic_array* groups;
-struct dynamic_array* outgoing_messages = NULL;
+struct dynamic_array* outgoing_messages;
 uint32_t user_count;
 char* this_server_name = "Server1"; 
 const struct string test_connection = { .data = "\x00\x01\0", .length = 3};
@@ -29,16 +29,17 @@ int main(int argc, char** argv)
 	pthread_t listenthread;
 	pthread_t writethread;
 	pthread_t cleanupthread;
-	pthread_t syncreceivethread;
+	pthread_t syncsendthread;
 	groups = new_dynamic_array();
+	outgoing_messages = new_dynamic_array();
 	
 	addr_size = sizeof(their_addr);
 	sockfd = init_connection();
 	init_users();
 	signal(SIGPIPE, SIG_IGN); //ignore SIGPIPE (handled internally)
 	
-	pthread_create(&syncreceivethread, NULL, syncreceiveserver_thread_func, NULL);
-	pthread_detach(syncreceivethread);
+	pthread_create(&syncsendthread, NULL, syncsendserver_thread_func, NULL);
+	pthread_detach(syncsendthread);
 
 
 	while(true)
@@ -106,7 +107,6 @@ int main(int argc, char** argv)
 		pthread_detach(cleanupthread);
 		
 	cleanup:
-		close(new_fd);
 		reset_string(&client_option, 1); //reset sizes in case they got bigger to save memory
 		reset_string(&username, DEFAULT_NAME_LENGTH);
 		reset_string(&password, DEFAULT_NAME_LENGTH);
