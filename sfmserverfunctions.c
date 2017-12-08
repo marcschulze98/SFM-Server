@@ -76,12 +76,10 @@ void put_message_local(const struct string_info* info) //copy message in queue o
 	message->length = 0;
 	message->capacity = complete_length;
 	
-	copy_helper(message, (const void*)&info->timestamp, 8, '>');
-	copy_helper(message, (const void*)info->source_server, (uint32_t)strlen(info->source_server), '@');
-	copy_helper(message, (const void*)info->source_user, (uint32_t)strlen(info->source_user), ':');
-	copy_helper(message, (const void*)(info->message->data + info->message_begin), (uint32_t)strlen(info->message->data + info->message_begin), '\0');
-	printf("here\n");
-	
+	copy_helper(message, &info->timestamp, 8, '>');
+	copy_helper(message, info->source_server, (uint32_t)strlen(info->source_server), '@');
+	copy_helper(message, info->source_user, (uint32_t)strlen(info->source_user), ':');
+	copy_helper(message, info->message->data + info->message_begin, (uint32_t)strlen(info->message->data + info->message_begin), '\0');
 	
 	pthread_mutex_lock(&groups->mutex);
 	
@@ -91,8 +89,6 @@ void put_message_local(const struct string_info* info) //copy message in queue o
 		struct string* tmp;
 		for(uint32_t i = 0; (username = get_group_user(groupname, i)) != NULL; i++)
 		{
-			printf("%p\n", username);
-			printf("name: %s\n", username);
 			if((user_id = get_user_id(username)) == 0)
 				continue;
 			tmp = malloc(sizeof(*tmp));
@@ -105,14 +101,12 @@ void put_message_local(const struct string_info* info) //copy message in queue o
 		free(message);
 		free(groupname);
 	} else {
-		printf("User-name = %s\n", target_name);
 		if((user_id = get_user_id(target_name)) == 0)
 			goto cleanup;
 		pthread_mutex_lock(&(users+user_id)->messages->mutex);
 		dynamic_array_push((users+user_id)->messages, message);
 		pthread_mutex_unlock(&(users+user_id)->messages->mutex);
 	}
-	printf("through\n");
 	
 cleanup:
 	free(target_name);

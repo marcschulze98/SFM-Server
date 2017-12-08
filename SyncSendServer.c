@@ -36,9 +36,9 @@ void* syncsendserver_thread_func(void* arg)
 			} else if(socket_fd != -1) {
 				struct string* message = dynamic_array_at(queue->messages,0);
 				printf("outgoing: %s\n", message->data);
-				//~ convert_string(message);
+				convert_string(message);
 				
-				//~ send_string(message, socket_fd);
+				send_string(message, socket_fd);
 				free(message->data);
 				dynamic_array_remove(queue->messages,0);
 				if(queue->messages->length == 0)
@@ -48,7 +48,7 @@ void* syncsendserver_thread_func(void* arg)
 					dynamic_array_remove(outgoing_messages, 0);
 				}
 				
-				//~ close(socket_fd);
+				close(socket_fd);
 			} else {
 				queue->tries++;
 			}

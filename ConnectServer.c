@@ -30,6 +30,7 @@ int main(int argc, char** argv)
 	pthread_t writethread;
 	pthread_t cleanupthread;
 	pthread_t syncsendthread;
+	pthread_t syncreceivethread;
 	groups = new_dynamic_array();
 	outgoing_messages = new_dynamic_array();
 	
@@ -40,8 +41,9 @@ int main(int argc, char** argv)
 	
 	pthread_create(&syncsendthread, NULL, syncsendserver_thread_func, NULL);
 	pthread_detach(syncsendthread);
-
-
+	pthread_create(&syncreceivethread, NULL, syncreceiveserver_thread_func, NULL);
+	pthread_detach(syncreceivethread);
+	
 	while(true)
 	{
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // accept an incoming connection

@@ -15,11 +15,10 @@ void* syncreceiveserver_thread_func(void* arg)
 	int new_fd;
 	char* hostname;
 	struct string message = new_string(DEFAULT_BUFFER_LENGTH);
-	struct string* tmp;
-	struct dynamic_array* messages = new_dynamic_array();
+	//~ struct string* tmp;
+	//~ struct dynamic_array* messages = new_dynamic_array();
 	struct return_info return_codes;
 	struct string_info* info;
-	int left;
 
 
 	int socket_fd = init_connection();
@@ -36,23 +35,15 @@ void* syncreceiveserver_thread_func(void* arg)
 		if(return_codes.error_occured)
 			goto cleanup;
 			
-		left = atoi(message.data);
-		for(int i = 0; i > left; i++)
+		//TODO: add check if server is legit
+		if(valid_message_format(&message, true))
 		{
-			do return_codes = get_message(&message, new_fd);
-			while(!return_codes.return_code); 
-			if(return_codes.error_occured)
-				goto cleanup;
-			//TODO: add check if server is legit
-			valid_message_format(&message, true);
-			tmp = malloc(sizeof(*tmp));
-			string_copy(tmp, &message);
+			//~ tmp = malloc(sizeof(*tmp));
+			//~ string_copy(tmp, &message);
 			
-			dynamic_array_push(messages, tmp);
-		}
-		for(int i = 0; i > left; i++)
-		{
-			info = get_string_info(dynamic_array_at(messages, 0));
+			//~ dynamic_array_push(messages, tmp);
+			
+			info = get_string_info(&message);
 			put_message_local(info);
 			
 			free(info->source_server);
@@ -60,7 +51,7 @@ void* syncreceiveserver_thread_func(void* arg)
 			free(info->message->data);
 			free(info->message);
 			free(info);
-			dynamic_array_remove(messages, 0);
+			//~ dynamic_array_remove(messages, 0);
 		}
 		
 	cleanup:
@@ -152,19 +143,23 @@ static struct string_info* get_string_info(struct string* message)
 			strncpy(info->source_user, message->data + server_found, i-server_found);
 			info->source_user[i-server_found] = '\0';
 			user_found = i+1;
+			memcpy(&info->timestamp, message->data+user_found, 8);
 			break;
 		}
 	}
 	
 	server_found = 0;
 	
-	for(uint32_t i = user_found+9; i < message->length; i++)
+	for(uint32_t i = user_found+9, j = 0; i < message->length; i++, j++)
 	{
 		if(!server_found && message->data[i] == '@')
 		{
 			server_found = i+1;
 		} else if(server_found && message->data[i] == ':') {
-			string_append(info->message, message->data+user_found+9);
+			info->message_begin = j+1;
+			string_append(info->message, message->data+user_found+9);		
+			info->message->data[info->message->length] = '\0';
+			info->message->length++;
 			break;
 		}
 	}
