@@ -19,6 +19,8 @@ const struct string test_connection = { .data = "\x00\x01\0", .length = 3};
 
 int main(int argc, char** argv)
 {
+	const struct string accept_login = { .data = "\x00\x02" "1\0", .length = 4};
+	const struct string deny_login = { .data = "\x00\x02" "0\0", .length = 4};
 	int sockfd, new_fd;
 	struct string client_option = new_string(2);
 	struct string username = new_string(DEFAULT_NAME_LENGTH);
@@ -69,8 +71,10 @@ int main(int argc, char** argv)
 		if(user_valid(&username, &password)) //check if user is valid
 		{
 			printf("User logged in: %s\n", username.data);
+			send_string(&accept_login, new_fd);
 		} else {
 			printf("User failed login: %s\n", username.data);
+			send_string(&deny_login, new_fd);
 			goto cleanup;
 		}
 		

@@ -44,7 +44,12 @@ void* syncreceiveserver_thread_func(void* arg)
 			//~ dynamic_array_push(messages, tmp);
 			
 			info = get_string_info(&message);
-			put_message_local(info);
+			if(strcmp(info->source_server, hostname) == 0)
+			{
+				put_message_local(info);
+			} else {
+				printf("Error: Mismatched Servername\nTold us: %s\nActual: %s\n", info->source_server, hostname);
+			}
 			
 			free(info->source_server);
 			free(info->source_user);
@@ -53,6 +58,7 @@ void* syncreceiveserver_thread_func(void* arg)
 			free(info);
 			//~ dynamic_array_remove(messages, 0);
 		}
+		
 		
 	cleanup:
 		free(hostname);
