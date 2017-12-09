@@ -15,14 +15,11 @@ void* syncreceiveserver_thread_func(void* arg)
 	int new_fd;
 	char* hostname;
 	struct string message = new_string(DEFAULT_BUFFER_LENGTH);
-	//~ struct string* tmp;
-	//~ struct dynamic_array* messages = new_dynamic_array();
 	struct return_info return_codes;
 	struct string_info* info;
-
+	int left;
 
 	int socket_fd = init_connection();
-
 	
 	while(true)
 	{
@@ -35,30 +32,31 @@ void* syncreceiveserver_thread_func(void* arg)
 		if(return_codes.error_occured)
 			goto cleanup;
 			
-		//TODO: add check if server is legit
-		if(valid_message_format(&message, true))
+		left = atoi(message.data);
+		for(int i = 0; i < left; i++)
 		{
-			//~ tmp = malloc(sizeof(*tmp));
-			//~ string_copy(tmp, &message);
-			
-			//~ dynamic_array_push(messages, tmp);
-			
-			info = get_string_info(&message);
-			if(strcmp(info->source_server, hostname) == 0)
-			{
-				put_message_local(info);
-			} else {
-				printf("Error: Mismatched Servername\nTold us: %s\nActual: %s\n", info->source_server, hostname);
+			do return_codes = get_message(&message, new_fd);
+			while(!return_codes.return_code); 
+			if(return_codes.error_occured)
+				goto cleanup;
+				
+			if(valid_message_format(&message, true))
+			{				
+				info = get_string_info(&message);
+				if(strcmp(info->source_server, hostname) != 0)
+				{
+					put_message_local(info);
+				} else {
+					printf("Error: Mismatched Servername\nTold us: %s\nActual: %s\n", info->source_server, hostname);
+				}
+				
+				free(info->source_server);
+				free(info->source_user);
+				free(info->message->data);
+				free(info->message);
+				free(info);
 			}
-			
-			free(info->source_server);
-			free(info->source_user);
-			free(info->message->data);
-			free(info->message);
-			free(info);
-			//~ dynamic_array_remove(messages, 0);
 		}
-		
 		
 	cleanup:
 		free(hostname);

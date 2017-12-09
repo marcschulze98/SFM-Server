@@ -131,6 +131,8 @@ static void put_message_extern(const struct string_info* info)
 	}
 	
 	bool found = false;
+	pthread_mutex_lock(&outgoing_messages->mutex);
+	
 	for(uint32_t i = 0; i < outgoing_messages->length; i++)
 	{
 		out = dynamic_array_at(outgoing_messages, i);
@@ -163,7 +165,9 @@ static void put_message_extern(const struct string_info* info)
 	copy_helper(message, &info->timestamp, 8, '>');
 	copy_helper(message, info->message->data, (uint32_t)strlen(info->message->data), '\0');
 	
-	dynamic_array_push(queue, message);	
+	dynamic_array_push(queue, message);
+	
+	pthread_mutex_unlock(&outgoing_messages->mutex);
 }
 
 static bool handle_command(const struct string_info* info, struct arguments* args) // check if message is a command, seperate payload from command
