@@ -1,9 +1,11 @@
 #include "SFM_Server.h"
+#include "SFM_Server.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
 
 static int init_connection(void);
+static struct string_info* get_string_info(struct string* message);
 char* get_info(struct sockaddr *sa, socklen_t salen);
 
 void* syncreceiveserver_thread_func(void* arg)
@@ -12,15 +14,53 @@ void* syncreceiveserver_thread_func(void* arg)
 	socklen_t addr_size = sizeof their_addr;
 	int new_fd;
 	char* hostname;
+	struct string message = new_string(DEFAULT_BUFFER_LENGTH);
+	struct return_info return_codes;
+	struct string_info* info;
+	int left;
 
 	int socket_fd = init_connection();
-
 	
 	while(true)
 	{
 		new_fd = accept(socket_fd, (struct sockaddr *)&their_addr, &addr_size);
 		hostname = get_info((struct sockaddr*)&their_addr, addr_size);
 		printf("%s connected\n", hostname);
+		
+		do return_codes = get_message(&message, new_fd);
+		while(!return_codes.return_code); 
+		if(return_codes.error_occured)
+			goto cleanup;
+			
+		left = atoi(message.data);
+		for(int i = 0; i < left; i++)
+		{
+			do return_codes = get_message(&message, new_fd);
+			while(!return_codes.return_code); 
+			if(return_codes.error_occured)
+				goto cleanup;
+				
+			if(valid_message_format(&message, true))
+			{				
+				info = get_string_info(&message);
+				if(strcmp(info->source_server, hostname) != 0)
+				{
+					put_message_local(info);
+				} else {
+					printf("Error: Mismatched Servername\nTold us: %s\nActual: %s\n", info->source_server, hostname);
+				}
+				
+				free(info->source_server);
+				free(info->source_user);
+				free(info->message->data);
+				free(info->message);
+				free(info);
+			}
+		}
+		
+	cleanup:
+		free(hostname);
+		reset_string(&message, DEFAULT_BUFFER_LENGTH);
 		close(new_fd);
 	}
 	
@@ -81,4 +121,52 @@ char* get_info(struct sockaddr *sa, socklen_t salen)
 	}
 	
 	return host;
+}
+
+static struct string_info* get_string_info(struct string* message)
+{
+	struct string_info* info = malloc(sizeof(*info));
+	info->message = malloc(sizeof(*info->message));
+	info->message->data = malloc(DEFAULT_BUFFER_LENGTH);
+	info->message->length = 0;
+	info->message->capacity = DEFAULT_BUFFER_LENGTH;
+	
+	uint32_t server_found = 0;
+	uint32_t user_found = 0;
+	
+	for(uint32_t i = 0; i < message->length; i++)
+	{
+		if(!server_found && message->data[i] == '@')
+		{
+			info->source_server = malloc(i+1);
+			strncpy(info->source_server, message->data, i);
+			info->source_server[i] = '\0';
+			server_found = i+1;
+		} else if(server_found && message->data[i] == ':') {
+			info->source_user = malloc(i-server_found+1);
+			strncpy(info->source_user, message->data + server_found, i-server_found);
+			info->source_user[i-server_found] = '\0';
+			user_found = i+1;
+			memcpy(&info->timestamp, message->data+user_found, 8);
+			break;
+		}
+	}
+	
+	server_found = 0;
+	
+	for(uint32_t i = user_found+9, j = 0; i < message->length; i++, j++)
+	{
+		if(!server_found && message->data[i] == '@')
+		{
+			server_found = i+1;
+		} else if(server_found && message->data[i] == ':') {
+			info->message_begin = j+1;
+			string_append(info->message, message->data+user_found+9);		
+			info->message->data[info->message->length] = '\0';
+			info->message->length++;
+			break;
+		}
+	}
+	
+	return info;
 }

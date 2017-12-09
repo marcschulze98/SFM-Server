@@ -52,6 +52,8 @@ void* syncreceiveserver_thread_func(void* arg);
 void* cleanupserver_thread_func(void* arg);
 char* contains_group(char* name);
 char* get_group_user(char* groupname, uint32_t user_number);
+void put_message_local(const struct string_info* info);
+void copy_helper(struct string* message, const void* source, uint32_t length, char insert);
 uint32_t get_user_id(char* username);
 
 extern struct user* users;						//users on this server

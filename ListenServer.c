@@ -4,12 +4,10 @@ static void loop(struct string_info* info, struct arguments* args);
 static void get_string_info(struct string_info* info);
 static void sort_message(const struct string_info* info);
 static void put_message_extern(const struct string_info* info);
-static void put_message_local(const struct string_info* info);
 static void create_group(char* groupname, struct arguments* args);
 static void delete_group(char* groupname, struct arguments* args);
 static void add_group(char* groupname_username, struct arguments* args);
 static void get_group(char* groupname, struct arguments* args);
-static void copy_helper(struct string* message, const void* source, uint32_t length, char insert);
 static bool handle_command(const struct string_info* info, struct arguments* args);
 
 _Thread_local bool should_shutdown;
@@ -116,86 +114,60 @@ static void sort_message(const struct string_info* info) //check target server a
 
 static void put_message_extern(const struct string_info* info)
 {
-
-}
-
-static void put_message_local(const struct string_info* info) //copy message in queue of the target user, replace target prefix with source prefix
-{
-	uint32_t server_found = 0;
-	uint32_t user_id;
-	char* target_name = NULL;
-	char* groupname;
+	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data) + 8 + 3 + 1);
+	struct string* message = malloc(sizeof(*message));
+	char* target_server = "\0";
+	struct outgoing* out;
+	struct dynamic_array* queue;
 	
 	for(uint32_t i = 0; i < info->message->length; i++)
 	{
-		if(server_found && (info->message->data[i] == ':'))
-		{
-			target_name = malloc(i-server_found+1);
-			memcpy(target_name, info->message->data+server_found, i-server_found);
-			target_name[i-server_found] = '\0';
-			break;
-		}
 		if(info->message->data[i] == '@')
-			server_found = i+1;
+		{
+			target_server = malloc(i+1);
+			strncpy(target_server, info->message->data, i);
+			target_server[i] = '\0';
+		}
 	}
 	
-	uint32_t complete_length = (uint32_t)(strlen(info->source_server) + strlen(info->source_user) + strlen(info->message->data + info->message_begin) + 8 + 3 + 1);
-	struct string* message = malloc(sizeof(*message));
+	bool found = false;
+	pthread_mutex_lock(&outgoing_messages->mutex);
 	
+	for(uint32_t i = 0; i < outgoing_messages->length; i++)
+	{
+		out = dynamic_array_at(outgoing_messages, i);
+		if(strcmp(target_server, out->target_server) == 0)
+		{
+			found = true;
+			queue = out->messages;
+			break;
+		}
+	}
+	
+	if(!found)
+	{
+		out = malloc(sizeof(*out));
+		out->target_server = target_server;
+		out->messages = new_dynamic_array();
+		out->tries = 0;
+		dynamic_array_push(outgoing_messages, out);
+		queue = out->messages;
+	} else {
+		free(target_server);
+	}
+		
 	message->data = malloc(complete_length);
 	message->length = 0;
 	message->capacity = complete_length;
 	
-	copy_helper(message, (const void*)&info->timestamp, 8, '>');
-	copy_helper(message, (const void*)info->source_server, (uint32_t)strlen(info->source_server), '@');
-	copy_helper(message, (const void*)info->source_user, (uint32_t)strlen(info->source_user), ':');
-	copy_helper(message, (const void*)(info->message->data + info->message_begin), (uint32_t)strlen(info->message->data + info->message_begin), '\0');
-	printf("here\n");
+	copy_helper(message, info->source_server, (uint32_t)strlen(info->source_server), '@');
+	copy_helper(message, info->source_user, (uint32_t)strlen(info->source_user), ':');
+	copy_helper(message, &info->timestamp, 8, '>');
+	copy_helper(message, info->message->data, (uint32_t)strlen(info->message->data), '\0');
 	
+	dynamic_array_push(queue, message);
 	
-	pthread_mutex_lock(&groups->mutex);
-	
-	if((groupname = contains_group(target_name)))
-	{
-		char* username = NULL;
-		struct string* tmp;
-		for(uint32_t i = 0; (username = get_group_user(groupname, i)) != NULL; i++)
-		{
-			printf("%p\n", username);
-			printf("name: %s\n", username);
-			if((user_id = get_user_id(username)) == 0)
-				continue;
-			tmp = malloc(sizeof(*tmp));
-			string_copy(tmp, message); //TODO: reference counting instead of copying every string?
-			pthread_mutex_lock(&(users+user_id)->messages->mutex);
-			dynamic_array_push((users+user_id)->messages, tmp);
-			pthread_mutex_unlock(&(users+user_id)->messages->mutex);
-		}
-		free(message->data);
-		free(message);
-		free(groupname);
-	} else {
-		printf("User-name = %s\n", target_name);
-		if((user_id = get_user_id(target_name)) == 0)
-			goto cleanup;
-		pthread_mutex_lock(&(users+user_id)->messages->mutex);
-		dynamic_array_push((users+user_id)->messages, message);
-		pthread_mutex_unlock(&(users+user_id)->messages->mutex);
-	}
-	printf("through\n");
-	
-cleanup:
-	free(target_name);
-	pthread_mutex_unlock(&groups->mutex);
-	
-}
-
-static void copy_helper(struct string* message, const void* source, uint32_t length, char insert) //helper function
-{
-	memcpy(message->data + message->length, source, length);
-	message->length += length;
-	message->data[message->length] = insert;
-	message->length += 1;
+	pthread_mutex_unlock(&outgoing_messages->mutex);
 }
 
 static bool handle_command(const struct string_info* info, struct arguments* args) // check if message is a command, seperate payload from command
