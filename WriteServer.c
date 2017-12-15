@@ -18,7 +18,7 @@ void* writeserver_thread_func(void* arg)
 			break;
 	}
 
-	(users+args->user_id)->write_connected = false;
+	atomic_store(&(users+args->user_id)->write_connected, false);
 	printf("writeshutdown\n");
 	pthread_exit(0);
 }

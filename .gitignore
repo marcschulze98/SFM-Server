@@ -1,3 +1,5 @@
 ConnectServer
-*.o
 userlist
+*.o
+*html
+*latex

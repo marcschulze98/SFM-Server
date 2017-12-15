@@ -348,27 +348,23 @@ static void get_group(char* groupname, struct arguments* args)
 	answer->data = malloc(DEFAULT_BUFFER_LENGTH);
 	answer->length = 0;
 	answer->capacity = DEFAULT_BUFFER_LENGTH;
-	string_append(answer, "/misc ");
+	string_append(answer, "/status");
 	pthread_mutex_lock(&groups->mutex);
 	
 	if(strcmp(groupname, "/showgroup") == 0)
 	{
-		if(groups->length == 0)
+		string_append(answer, " groups");
+		if(groups->length != 0)
 		{
-			string_append(answer, "No groups on this server");
-		} else {
-			string_append(answer, "The following groups are on this server:");
 			for(size_t i = 0; i < groups->length; i++)
 			{
 				current_group = (struct group*)dynamic_array_at(groups, i);
-				realloc_write(answer, '\n', answer->length);
-				answer->length++;
-				realloc_write(answer, '\t', answer->length);
-				answer->length++;
+				string_append(answer, " ");
 				string_append(answer, current_group->name);
 			}
 		}
 	} else {
+		
 		bool found = false;
 		for(size_t i = 0; i < groups->length; i++)
 		{	
@@ -381,24 +377,23 @@ static void get_group(char* groupname, struct arguments* args)
 		}
 		if(found)
 		{
-			string_append(answer, "Members of ");
+			string_append(answer, " groupmembers");
+			string_append(answer, groupname+strlen("/showgroup"));
+			string_append(answer, " ");
 			string_append(answer, groupname);
-			string_append(answer, ":");
-			
+			string_append(answer, " ");
+
 			struct dynamic_array* members = current_group->members;
 			
 			for(size_t i = 0; i < members->length; i++)
 			{
-				realloc_write(answer, '\n', answer->length);
-				answer->length++;
-				realloc_write(answer, '\t', answer->length);
+				realloc_write(answer, ',', answer->length);
 				answer->length++;
 				string_append(answer, members->data[i]);
 			}
 		} else {
-			string_append(answer, "Group ");
+			string_append(answer, " nogroup ");
 			string_append(answer, groupname);
-			string_append(answer, " not found");
 		}
 	}
 	

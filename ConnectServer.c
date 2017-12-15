@@ -89,20 +89,22 @@ int main(int argc, char** argv)
 				break;
 			}
 		}
+		bool listen_connected = atomic_load(&(users+args->user_id)->listen_connected);
+		bool write_connected = atomic_load(&(users+args->user_id)->write_connected);
 		
 		if(args->user_id < 0)
 			goto cleanup;
 
-		if(client_option.data[0] == '1' && (users+args->user_id)->listen_connected == false && (users+args->user_id)->write_connected == false) //create thread according to client_option
+		if(client_option.data[0] == '1' &&  listen_connected == false && write_connected == false) //create thread according to client_option
 		{
 			args->write_exists = true;
 			args->listen_exists = true;
 			pthread_create(&listenthread, NULL, listenserver_thread_func, args);
 			pthread_create(&writethread, NULL, writeserver_thread_func, args);
-		} else if(client_option.data[0] == '2' && (users+args->user_id)->listen_connected == false) {
+		} else if(client_option.data[0] == '2' && listen_connected == false) {
 			args->listen_exists = true;
 			pthread_create(&listenthread, NULL, listenserver_thread_func, args);
-		} else if(client_option.data[0] == '3' && (users+args->user_id)->write_connected == false) {
+		} else if(client_option.data[0] == '3' && write_connected == false) {
 			args->write_exists = true;
 			pthread_create(&writethread, NULL, writeserver_thread_func, args);
 		}
