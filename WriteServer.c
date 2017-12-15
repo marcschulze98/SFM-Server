@@ -1,5 +1,6 @@
 #include "SFM_Server.h"
-
+///@file
+///@brief Sends messages to the connected user
 static void print_newest_message(struct arguments* args);
 
 void* writeserver_thread_func(void* arg)

@@ -1,3 +1,8 @@
+/**
+* @file
+* @brief Checks the outgoing message queue and tries to connect to the specified
+* target server. If Successful, sends all messages in that queue.
+*/
 #include "SFM_Server.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -16,7 +21,6 @@ void* syncsendserver_thread_func(void* arg)
 	
 	while(true)
 	{
-		sleep(30);
 		pthread_mutex_lock(&outgoing_messages->mutex);
 		
 		queue  = dynamic_array_at(outgoing_messages,0);

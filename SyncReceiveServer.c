@@ -1,3 +1,8 @@
+/**
+* @file
+* @brief Recieves messages from another Server, checking for authenticity,
+* and forwards the messages to local users.
+*/
 #include "SFM_Server.h"
 #include "SFM_Server.h"
 #include <arpa/inet.h>

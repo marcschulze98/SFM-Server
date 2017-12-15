@@ -1,3 +1,8 @@
+/**
+* @file
+* @brief Gets messages from the connected user and either executes the
+* command or forwards the message to a local user or another server
+*/
 #include "SFM_Server.h"
 
 static void loop(struct string_info* info, struct arguments* args);

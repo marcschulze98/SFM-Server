@@ -88,15 +88,29 @@ char* contains_group(char* name);
  * 	@returns char* to username or NULL if user and/or group couldn't be found.
  */ 
 char* get_group_user(char* groupname, uint32_t user_number);
+/** @brief Puts the message in @a info in the queue of the target user and
+ * replaces the message prefix.
+ */ 
 void put_message_local(const struct string_info* info);
+/** @brief Helper function for put_message_local(), should not be called directly.
+ */ 
 void copy_helper(struct string* message, const void* source, uint32_t length, char insert);
+/** @brief Gets the user id of @a username.
+ *  @returns user id if user exists, otherwise 0 (dummy user)
+ */ 
 uint32_t get_user_id(char* username);
 
+///array of users
 extern struct user* users;						//users on this server
+///dynamic array of groups, contains struct group*
 extern struct dynamic_array* groups;			//groups on this server
+///dynamic array of outgoing messages, contains struct outgoing*
 extern struct dynamic_array* outgoing_messages;	//messages for other Servers
+///length of the users array
 extern uint32_t user_count;						//number of users
+///string containing this servers name
 extern char* this_server_name;					//self explanatory
+///struct string to be used to probe the connection
 extern const struct string test_connection; 	//default message to check if other side is stil connected
 
 

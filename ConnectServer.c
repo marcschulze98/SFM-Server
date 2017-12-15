@@ -4,7 +4,11 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
+/**
+* @file
+* @brief Sets up the server and then takes one user, verifies the login data
+* and then starts the necessary threads
+*/
 void init_users(void);
 int init_connection(void);
 bool user_valid(const struct string* username, const struct string* password);
