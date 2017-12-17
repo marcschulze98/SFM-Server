@@ -18,15 +18,19 @@ void* syncsendserver_thread_func(void* arg)
 	struct string* tmp;
 	struct string count = new_string(10);
 	struct outgoing* queue;
+	bool changed = true;
 	
 	while(true)
 	{
+		if(!changed)
+			sleep(1);
 		pthread_mutex_lock(&outgoing_messages->mutex);
 		
 		queue  = dynamic_array_at(outgoing_messages,0);
 		
 		if(queue != NULL)
 		{
+			changed = true;
 			socket_fd = init_connection(queue->target_server);
 			if(queue->tries > 5)
 			{
@@ -67,6 +71,8 @@ void* syncsendserver_thread_func(void* arg)
 			}
 			
 			
+		} else {
+			changed = false;
 		}
 		pthread_mutex_unlock(&outgoing_messages->mutex);
 	}
