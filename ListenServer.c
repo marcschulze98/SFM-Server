@@ -359,14 +359,15 @@ static void get_group(char* groupname, struct arguments* args)
 	if(strcmp(groupname, "/showgroup") == 0)
 	{
 		string_append(answer, " groups");
-		if(groups->length != 0)
+
+		for(size_t i = 0; i < groups->length; i++)
 		{
-			for(size_t i = 0; i < groups->length; i++)
-			{
-				current_group = (struct group*)dynamic_array_at(groups, i);
+			current_group = (struct group*)dynamic_array_at(groups, i);
+			if(i != 0)	
+				string_append(answer, ",");
+			else
 				string_append(answer, " ");
-				string_append(answer, current_group->name);
-			}
+			string_append(answer, current_group->name);
 		}
 	} else {
 		
@@ -386,14 +387,15 @@ static void get_group(char* groupname, struct arguments* args)
 			string_append(answer, groupname+strlen("/showgroup"));
 			string_append(answer, " ");
 			string_append(answer, groupname);
-			string_append(answer, " ");
 
 			struct dynamic_array* members = current_group->members;
 			
 			for(size_t i = 0; i < members->length; i++)
 			{
-				realloc_write(answer, ',', answer->length);
-				answer->length++;
+				if(i != 0)
+					string_append(answer, ",");
+				else
+					string_append(answer, " ");
 				string_append(answer, members->data[i]);
 			}
 		} else {
