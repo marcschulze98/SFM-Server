@@ -11,8 +11,9 @@ static void sort_message(const struct string_info* info);
 static void put_message_extern(const struct string_info* info);
 static void create_group(char* groupname, struct arguments* args);
 static void delete_group(char* groupname, struct arguments* args);
-static void add_group(char* groupname_username, struct arguments* args);
+static void add_delete_member(char* groupname_username, struct arguments* args, bool add);
 static void get_group(char* groupname, struct arguments* args);
+static void get_users(struct arguments* args, bool online_only);
 static bool handle_command(const struct string_info* info, struct arguments* args);
 
 _Thread_local bool should_shutdown;
@@ -184,7 +185,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 	struct string string_without_payload = new_string(DEFAULT_NAME_LENGTH);
 	bool has_payload = false;
 
-	for(uint32_t i = 0; i <= strlen(command); i++)
+	for(uint32_t i = 0; i < strlen(command); i++)
 	{
 		if(command[i] != ' ')
 		{
@@ -206,12 +207,18 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 		create_group(command+strlen("/creategroup")+1, args);
 	} else if(strcmp(string_without_payload.data, "/deletegroup") == 0 && has_payload) {
 		delete_group(command+strlen("/creategroup")+1, args);
-	} else if(strcmp(string_without_payload.data, "/addgroup") == 0 && has_payload) {
-		add_group(command+strlen("/addgroup")+1, args);
+	} else if(strcmp(string_without_payload.data, "/addmember") == 0 && has_payload) {
+		add_delete_member(command+strlen("/addmember")+1, args, true);
+	} else if(strcmp(string_without_payload.data, "/deletemember") == 0 && has_payload) {
+		add_delete_member(command+strlen("/deletemember")+1, args, false);
 	} else if(strcmp(string_without_payload.data, "/showgroup") == 0 && has_payload) {
 		get_group(command+strlen("/showgroup")+1, args);
 	} else if(strcmp(string_without_payload.data, "/showgroup") == 0) {
 		get_group(string_without_payload.data, args);
+	} else if(strcmp(string_without_payload.data, "/onlineusers") == 0) {
+		get_users(args, true);
+	} else if(strcmp(string_without_payload.data, "/users") == 0) {
+		get_users(args, false);
 	} 
 	
 	free(string_without_payload.data);
@@ -274,7 +281,7 @@ static void delete_group(char* groupname, struct arguments* args) //check if gro
 	pthread_mutex_unlock(&groups->mutex);
 }
 
-static void add_group(char* groupname_username, struct arguments* args) //check if group exists, then if user exists, if not, add user to group
+static void add_delete_member(char* groupname_username, struct arguments* args, bool add) //check if group exists, then if user exists, if not, add user to group
 {
 	if(strlen(groupname_username) == 0)
 		return;
@@ -328,11 +335,13 @@ static void add_group(char* groupname_username, struct arguments* args) //check 
 		{
 			if(strcmp((char*)dynamic_array_at(members, i), username.data) == 0)
 			{
+				if(!add)
+					dynamic_array_remove(members, i);
 				found = true;
 				break;
 			}
 		}
-		if(!found)
+		if(add && !found)
 		{
 			char* tmp = malloc(username.length);
 			strcpy(tmp, username.data);
@@ -413,4 +422,31 @@ static void get_group(char* groupname, struct arguments* args)
 	pthread_mutex_unlock(&(users+args->user_id)->messages->mutex);
 	
 	pthread_mutex_unlock(&groups->mutex);
+}
+
+static void get_users(struct arguments* args, bool online_only)
+{
+	struct user current_user;
+	struct string* answer = malloc(sizeof(*answer));
+	answer->data = malloc(DEFAULT_BUFFER_LENGTH);
+	answer->length = 0;
+	answer->capacity = DEFAULT_BUFFER_LENGTH;
+	string_append(answer, "/status users");
+
+	for(size_t i = 0; i < user_count; i++)
+	{
+		current_user = users[i];
+		if(!online_only || (online_only && (current_user.write_connected || current_user.listen_connected)))
+		{
+			if(i != 0)	
+				string_append(answer, ",");
+			else
+				string_append(answer, " ");
+			string_append(answer, current_user.name);
+		}
+	}
+
+	pthread_mutex_lock(&(users+args->user_id)->messages->mutex);
+	dynamic_array_push((users+args->user_id)->messages, answer);
+	pthread_mutex_unlock(&(users+args->user_id)->messages->mutex);
 }
