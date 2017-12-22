@@ -49,7 +49,7 @@ static void loop(struct string_info* info, struct arguments* args)
 			should_shutdown = true;
 			return;
 		}
-		sleep(1);
+		//sleep(1);
 		return_codes = get_message(info->message,args->socket_fd);
 		if(return_codes.error_occured)
 		{
