@@ -185,7 +185,7 @@ static bool handle_command(const struct string_info* info, struct arguments* arg
 	struct string string_without_payload = new_string(DEFAULT_NAME_LENGTH);
 	bool has_payload = false;
 
-	for(uint32_t i = 0; i < strlen(command); i++)
+	for(uint32_t i = 0; i <= strlen(command); i++)
 	{
 		if(command[i] != ' ')
 		{
@@ -393,7 +393,6 @@ static void get_group(char* groupname, struct arguments* args)
 		if(found)
 		{
 			string_append(answer, " groupmembers");
-			string_append(answer, groupname+strlen("/showgroup"));
 			string_append(answer, " ");
 			string_append(answer, groupname);
 
@@ -431,17 +430,26 @@ static void get_users(struct arguments* args, bool online_only)
 	answer->data = malloc(DEFAULT_BUFFER_LENGTH);
 	answer->length = 0;
 	answer->capacity = DEFAULT_BUFFER_LENGTH;
-	string_append(answer, "/status users");
+	if(online_only)
+		string_append(answer, "/status onlineusers");
+	else
+		string_append(answer, "/status users");
+	bool first = true;
 
 	for(size_t i = 0; i < user_count; i++)
 	{
 		current_user = users[i];
 		if(!online_only || (online_only && (current_user.write_connected || current_user.listen_connected)))
 		{
-			if(i != 0)	
+			if(!first)	
+			{
 				string_append(answer, ",");
+			}
 			else
+			{
 				string_append(answer, " ");
+				first = false;
+			}
 			string_append(answer, current_user.name);
 		}
 	}
